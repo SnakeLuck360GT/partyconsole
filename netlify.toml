@@ -1,0 +1,19 @@
+# Netlify: free static hosting. No server needed, since phones connect to the TV browser peer-to-peer (WebRTC via PeerJS).
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+
+# Short join link: yoursite.netlify.app/play
+[[redirects]]
+  from = "/play"
+  to = "/controller.html"
+  status = 200
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

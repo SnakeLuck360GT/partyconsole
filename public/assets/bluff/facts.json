@@ -1,0 +1,3337 @@
+[
+{
+"cat": "Animals",
+"q": "Scotland's official national animal is the ____.",
+"a": "unicorn",
+"alt": [
+"unicorns"
+],
+"lies": [
+"red squirrel",
+"highland cow",
+"loch ness monster"
+]
+},
+{
+"cat": "Animals",
+"q": "A group of flamingos is called a ____.",
+"a": "flamboyance",
+"alt": [
+"flamboyence",
+"flamboyancy"
+],
+"lies": [
+"fiesta",
+"tutu",
+"bouquet"
+]
+},
+{
+"cat": "Animals",
+"q": "Wombats are famous for producing ____-shaped poop.",
+"a": "cube",
+"alt": [
+"cubes",
+"cubic",
+"square",
+"squares",
+"cubed",
+"dice",
+"box"
+],
+"lies": [
+"heart",
+"star",
+"pyramid"
+]
+},
+{
+"cat": "Animals",
+"q": "A shrimp's heart is located in its ____.",
+"a": "head",
+"alt": [
+"heads"
+],
+"lies": [
+"tail",
+"claws",
+"legs"
+]
+},
+{
+"cat": "Animals",
+"q": "An octopus has ____ hearts.",
+"a": "three",
+"alt": [
+"3"
+],
+"lies": [
+"two",
+"five",
+"eight"
+]
+},
+{
+"cat": "Animals",
+"q": "Sea otters often hold ____ while they sleep so they don't drift apart.",
+"a": "hands",
+"alt": [
+"paws",
+"each other's hands",
+"hand",
+"paw",
+"each others hands"
+],
+"lies": [
+"tails",
+"whiskers",
+"ears"
+]
+},
+{
+"cat": "Animals",
+"q": "Koalas have ____ so similar to humans' that they could confuse crime scene investigators.",
+"a": "fingerprints",
+"alt": [
+"fingerprint",
+"finger prints",
+"prints"
+],
+"lies": [
+"voices",
+"teeth",
+"blood types"
+]
+},
+{
+"cat": "Animals",
+"q": "Butterflies taste their food using their ____.",
+"a": "feet",
+"alt": [
+"foot",
+"legs"
+],
+"lies": [
+"wings",
+"eyelashes",
+"knees"
+]
+},
+{
+"cat": "Animals",
+"q": "Cats can't taste ____.",
+"a": "sweetness",
+"alt": [
+"sweet",
+"sweets",
+"sugar",
+"sweet things",
+"sweet food",
+"sugary things",
+"sweet stuff"
+],
+"lies": [
+"salt",
+"bitterness",
+"meat"
+]
+},
+{
+"cat": "Animals",
+"q": "Hippos ooze a reddish, oily liquid that works as a natural ____.",
+"a": "sunscreen",
+"alt": [
+"sun screen",
+"sunblock",
+"sun block",
+"sun cream",
+"suncream",
+"antibiotic",
+"antiseptic"
+],
+"lies": [
+"perfume",
+"bug spray",
+"mouthwash"
+]
+},
+{
+"cat": "Animals",
+"q": "In seahorses, it's the ____ who gets pregnant and gives birth.",
+"a": "father",
+"alt": [
+"male",
+"dad",
+"males",
+"daddy",
+"fathers",
+"boy",
+"boys",
+"man"
+],
+"lies": [
+"grandmother",
+"oldest sibling",
+"herd leader"
+]
+},
+{
+"cat": "Animals",
+"q": "Dolphins call each other using unique whistles that work like ____.",
+"a": "names",
+"alt": [
+"name",
+"nicknames"
+],
+"lies": [
+"passwords",
+"barcodes",
+"alarms"
+]
+},
+{
+"cat": "Animals",
+"q": "Microscopic animals called tardigrades have survived a trip to ____ with no protection at all.",
+"a": "outer space",
+"alt": [
+"space",
+"orbit",
+"low earth orbit",
+"the vacuum of space"
+],
+"lies": [
+"Mars",
+"the Sun",
+"Jupiter"
+]
+},
+{
+"cat": "Animals",
+"q": "An ostrich's eye is bigger than its ____.",
+"a": "brain",
+"alt": [
+"brains"
+],
+"lies": [
+"heart",
+"beak",
+"stomach"
+]
+},
+{
+"cat": "Animals",
+"q": "A cockroach can survive for about a week without its ____.",
+"a": "head",
+"alt": [
+"heads"
+],
+"lies": [
+"stomach",
+"skin",
+"exoskeleton"
+]
+},
+{
+"cat": "Animals",
+"q": "Scientists discovered that rats make laughter-like squeaks when they're ____.",
+"a": "tickled",
+"alt": [
+"tickle",
+"being tickled",
+"tickling",
+"tickles"
+],
+"lies": [
+"bored",
+"dizzy",
+"sneezing"
+]
+},
+{
+"cat": "Animals",
+"q": "Crows can remember human ____ and hold a grudge for years.",
+"a": "faces",
+"alt": [
+"face"
+],
+"lies": [
+"names",
+"birthdays",
+"shoe sizes"
+]
+},
+{
+"cat": "Animals",
+"q": "Goats have ____-shaped pupils.",
+"a": "rectangular",
+"alt": [
+"rectangle",
+"rectangles",
+"horizontal",
+"bar",
+"rectangluar",
+"square",
+"letterbox"
+],
+"lies": [
+"star",
+"triangle",
+"crescent"
+]
+},
+{
+"cat": "Animals",
+"q": "Polar bear fur looks white, but the skin underneath is ____.",
+"a": "black",
+"alt": [
+"dark",
+"black coloured",
+"black colored"
+],
+"lies": [
+"pink",
+"purple",
+"bright blue"
+]
+},
+{
+"cat": "Animals",
+"q": "The Australian ____ bird can mimic chainsaws and camera shutters.",
+"a": "lyre",
+"alt": [
+"lyrebird",
+"lyre bird",
+"superb lyrebird",
+"liar"
+],
+"lies": [
+"echo",
+"kazoo",
+"copycat"
+]
+},
+{
+"cat": "Animals",
+"q": "To scare off predators, some horned lizards squirt ____ from their eyes.",
+"a": "blood",
+"alt": [
+"bloods"
+],
+"lies": [
+"venom",
+"ink",
+"milk"
+]
+},
+{
+"cat": "Animals",
+"q": "A giraffe's neck contains just ____ bones, the same number as a human's.",
+"a": "seven",
+"alt": [
+"7",
+"7 vertebrae",
+"seven vertebrae"
+],
+"lies": [
+"twelve",
+"one hundred",
+"three"
+]
+},
+{
+"cat": "Animals",
+"q": "Hummingbirds are the only birds that can fly ____.",
+"a": "backwards",
+"alt": [
+"backward",
+"in reverse",
+"reverse",
+"back"
+],
+"lies": [
+"while sleeping",
+"in straight lines",
+"with one wing"
+]
+},
+{
+"cat": "Animals",
+"q": "Some male penguins court a mate by presenting her with a ____.",
+"a": "pebble",
+"alt": [
+"pebbles",
+"stone",
+"rock",
+"stones",
+"rocks"
+],
+"lies": [
+"feather",
+"seashell",
+"snowball"
+]
+},
+{
+"cat": "Animals",
+"q": "Frogs use their ____ to help push food down their throats.",
+"a": "eyes",
+"alt": [
+"eyeballs",
+"eye",
+"eyeball"
+],
+"lies": [
+"elbows",
+"toes",
+"ears"
+]
+},
+{
+"cat": "Animals",
+"q": "Every dog's ____ print is unique, just like a human fingerprint.",
+"a": "nose",
+"alt": [
+"snout",
+"noses"
+],
+"lies": [
+"paw",
+"ear",
+"tail"
+]
+},
+{
+"cat": "Animals",
+"q": "A group of porcupines is called a ____.",
+"a": "prickle",
+"alt": [
+"prickles"
+],
+"lies": [
+"stab",
+"pincushion",
+"poke"
+]
+},
+{
+"cat": "Animals",
+"q": "A baby puffin is called a ____.",
+"a": "puffling",
+"alt": [
+"pufflings"
+],
+"lies": [
+"puffball",
+"pufflet",
+"puffkin"
+]
+},
+{
+"cat": "Animals",
+"q": "A baby echidna is called a ____.",
+"a": "puggle",
+"alt": [
+"puggles"
+],
+"lies": [
+"spikelet",
+"echidnette",
+"pinlet"
+]
+},
+{
+"cat": "Animals",
+"q": "Sharks have been around for longer than ____.",
+"a": "trees",
+"alt": [
+"tree",
+"forests"
+],
+"lies": [
+"the Moon",
+"oceans",
+"the Sun"
+]
+},
+{
+"cat": "Animals",
+"q": "Despite spending most of their lives in water, hippos can't ____.",
+"a": "swim",
+"alt": [
+"really swim",
+"swimming"
+],
+"lies": [
+"hold their breath",
+"see underwater",
+"sleep underwater"
+]
+},
+{
+"cat": "Animals",
+"q": "Kangaroos can't walk ____.",
+"a": "backwards",
+"alt": [
+"backward",
+"in reverse",
+"back"
+],
+"lies": [
+"uphill",
+"in the dark",
+"on sand"
+]
+},
+{
+"cat": "Animals",
+"q": "Crocodiles can't stick out their ____.",
+"a": "tongues",
+"alt": [
+"tongue"
+],
+"lies": [
+"claws",
+"teeth",
+"necks"
+]
+},
+{
+"cat": "Animals",
+"q": "Wood frogs survive winter by ____, with no heartbeat at all.",
+"a": "freezing solid",
+"alt": [
+"freezing",
+"being frozen",
+"frozen",
+"freeze",
+"turning into ice",
+"turning to ice",
+"freezing themselves"
+],
+"lies": [
+"sleeping in beaver dams",
+"eating snow",
+"migrating south"
+]
+},
+{
+"cat": "Animals",
+"q": "Tiny male peacock ____ wave their colourful bottoms and dance to impress females.",
+"a": "spiders",
+"alt": [
+"spider"
+],
+"lies": [
+"moths",
+"frogs",
+"crabs"
+]
+},
+{
+"cat": "Animals",
+"q": "A pistol shrimp snaps its claw so fast that the bubble it makes briefly gives off ____.",
+"a": "light",
+"alt": [
+"a flash of light",
+"flash",
+"flashes of light",
+"heat"
+],
+"lies": [
+"music",
+"electricity",
+"a smell"
+]
+},
+{
+"cat": "Animals",
+"q": "Male satin bowerbirds decorate their courtship nests with ____ objects.",
+"a": "blue",
+"alt": [
+"bright blue",
+"blue coloured",
+"blue colored"
+],
+"lies": [
+"red",
+"yellow",
+"green"
+]
+},
+{
+"cat": "Animals",
+"q": "The 'immortal jellyfish' can turn itself back into a ____ when it's stressed or injured.",
+"a": "polyp",
+"alt": [
+"polyps",
+"baby",
+"juvenile",
+"younger version",
+"child",
+"young"
+],
+"lies": [
+"egg",
+"starfish",
+"seed"
+]
+},
+{
+"cat": "Animals",
+"q": "An elephant pregnancy lasts about ____ months.",
+"a": "twenty-two",
+"alt": [
+"22",
+"twenty two",
+"twentytwo",
+"two years",
+"2 years",
+"almost two years"
+],
+"lies": [
+"fifteen",
+"thirty",
+"eleven"
+]
+},
+{
+"cat": "Animals",
+"q": "Flamingos are pink because of their ____.",
+"a": "diet",
+"alt": [
+"food",
+"shrimp",
+"algae",
+"carotenoids",
+"what they eat",
+"brine shrimp",
+"eating shrimp"
+],
+"lies": [
+"sunburn",
+"blood",
+"mood"
+]
+},
+{
+"cat": "Animals",
+"q": "Sea cucumbers breathe through their ____.",
+"a": "butts",
+"alt": [
+"butt",
+"bum",
+"bottom",
+"bottoms",
+"anus",
+"backside",
+"rear end",
+"rear",
+"behind",
+"bums",
+"cloaca",
+"buttocks"
+],
+"lies": [
+"mouths",
+"noses",
+"gills"
+]
+},
+{
+"cat": "Animals",
+"q": "A woodpecker's tongue is so long it wraps around its ____.",
+"a": "skull",
+"alt": [
+"brain",
+"head"
+],
+"lies": [
+"neck",
+"beak",
+"body"
+]
+},
+{
+"cat": "Animals",
+"q": "Male platypuses have venomous ____ on their back legs.",
+"a": "spurs",
+"alt": [
+"spur",
+"ankle spurs",
+"stingers",
+"spikes",
+"stinger",
+"spike"
+],
+"lies": [
+"suckers",
+"fins",
+"quills"
+]
+},
+{
+"cat": "Animals",
+"q": "Under ultraviolet light, platypus fur glows ____.",
+"a": "blue-green",
+"alt": [
+"green",
+"blue",
+"cyan",
+"teal",
+"bluish green",
+"turquoise",
+"blue green",
+"green blue"
+],
+"lies": [
+"pink",
+"orange",
+"gold"
+]
+},
+{
+"cat": "Animals",
+"q": "Reindeer eyes change colour from gold in summer to ____ in winter.",
+"a": "blue",
+"alt": [
+"deep blue",
+"dark blue"
+],
+"lies": [
+"red",
+"green",
+"black"
+]
+},
+{
+"cat": "Animals",
+"q": "Cheetahs can't ____; instead they chirp and purr.",
+"a": "roar",
+"alt": [
+"roaring"
+],
+"lies": [
+"sneeze",
+"yawn",
+"blink"
+]
+},
+{
+"cat": "Animals",
+"q": "A penguin living at Edinburgh Zoo holds the rank of ____ in the Norwegian King's Guard.",
+"a": "major general",
+"alt": [
+"general",
+"brigadier",
+"knight",
+"sir",
+"major-general"
+],
+"lies": [
+"drum major",
+"lance corporal",
+"royal mascot"
+]
+},
+{
+"cat": "Animals",
+"q": "Archaeologists have found still-edible honey in ancient ____ tombs.",
+"a": "Egyptian",
+"alt": [
+"egypt",
+"egyptians",
+"pharaohs",
+"pharaoh",
+"pharaoh's"
+],
+"lies": [
+"Chinese",
+"Roman",
+"Greek"
+]
+},
+{
+"cat": "Animals",
+"q": "A group of crows is called a ____.",
+"a": "murder",
+"alt": [
+"murders"
+],
+"lies": [
+"funeral",
+"gossip",
+"gloom"
+]
+},
+{
+"cat": "Animals",
+"q": "A group of owls is called a ____.",
+"a": "parliament",
+"alt": [
+"wisdom",
+"stare",
+"parliment"
+],
+"lies": [
+"senate",
+"hoot",
+"council"
+]
+},
+{
+"cat": "Animals",
+"q": "A group of jellyfish can be called a ____.",
+"a": "smack",
+"alt": [
+"bloom",
+"swarm",
+"smacks"
+],
+"lies": [
+"wobble",
+"jiggle",
+"sting"
+]
+},
+{
+"cat": "Animals",
+"q": "Sloths can hold their breath for up to ____ minutes, longer than dolphins can.",
+"a": "forty",
+"alt": [
+"40"
+],
+"lies": [
+"ten",
+"ninety",
+"five"
+]
+},
+{
+"cat": "Animals",
+"q": "Velcro was invented after an engineer noticed ____ stuck to his dog's fur.",
+"a": "burrs",
+"alt": [
+"burr",
+"burs",
+"bur",
+"burdock",
+"burdock burrs",
+"seeds",
+"seed pods",
+"thistles"
+],
+"lies": [
+"chewing gum",
+"spider webs",
+"pine needles"
+]
+},
+{
+"cat": "Food",
+"q": "Botanically speaking, bananas are berries but ____ are not.",
+"a": "strawberries",
+"alt": [
+"strawberry",
+"raspberries",
+"raspberry",
+"blackberries",
+"blackberry"
+],
+"lies": [
+"grapes",
+"tomatoes",
+"blueberries"
+]
+},
+{
+"cat": "Food",
+"q": "Peanuts aren't really nuts. They're ____.",
+"a": "legumes",
+"alt": [
+"legume",
+"beans",
+"bean",
+"a legume",
+"pulses",
+"peas",
+"pea"
+],
+"lies": [
+"roots",
+"berries",
+"tubers"
+]
+},
+{
+"cat": "Food",
+"q": "Cashew nuts grow hanging from the bottom of a fruit called the cashew ____.",
+"a": "apple",
+"alt": [
+"apples",
+"fruit"
+],
+"lies": [
+"pear",
+"melon",
+"plum"
+]
+},
+{
+"cat": "Food",
+"q": "In the 1830s, ketchup was sold as a ____.",
+"a": "medicine",
+"alt": [
+"medicines",
+"cure",
+"remedy",
+"pills",
+"pill",
+"tonic",
+"medical cure",
+"cure for indigestion"
+],
+"lies": [
+"hair dye",
+"paint",
+"shoe polish"
+]
+},
+{
+"cat": "Food",
+"q": "Before orange took over, most cultivated carrots were ____.",
+"a": "purple",
+"alt": [
+"yellow",
+"white",
+"purple and yellow"
+],
+"lies": [
+"blue",
+"green",
+"striped"
+]
+},
+{
+"cat": "Food",
+"q": "Ripe cranberries ____, which is how farmers have tested them.",
+"a": "bounce",
+"alt": [
+"bouncing",
+"bounce off",
+"float"
+],
+"lies": [
+"squeak",
+"glow",
+"whistle"
+]
+},
+{
+"cat": "Food",
+"q": "Apples float in water because they're about 25% ____.",
+"a": "air",
+"alt": [
+"air pockets",
+"gas",
+"oxygen"
+],
+"lies": [
+"sugar",
+"fat",
+"juice"
+]
+},
+{
+"cat": "Food",
+"q": "Worcestershire sauce is made with fermented ____.",
+"a": "anchovies",
+"alt": [
+"anchovy",
+"fish"
+],
+"lies": [
+"mushrooms",
+"squid",
+"peanuts"
+]
+},
+{
+"cat": "Food",
+"q": "Eaten in large amounts, the spice ____ can make you hallucinate.",
+"a": "nutmeg",
+"alt": [
+"nutmegs"
+],
+"lies": [
+"cinnamon",
+"paprika",
+"turmeric"
+]
+},
+{
+"cat": "Food",
+"q": "Stored in big enough piles, ____ can spontaneously burst into flames.",
+"a": "pistachios",
+"alt": [
+"pistachio",
+"pistachio nuts"
+],
+"lies": [
+"peppercorns",
+"popcorn kernels",
+"dried apricots"
+]
+},
+{
+"cat": "Food",
+"q": "White chocolate isn't technically chocolate because it contains no cocoa ____.",
+"a": "solids",
+"alt": [
+"solid",
+"powder",
+"mass",
+"cocoa solids"
+],
+"lies": [
+"butter",
+"sugar",
+"milk"
+]
+},
+{
+"cat": "Food",
+"q": "During 'tulip mania' in the 1630s, a single rare tulip bulb could cost as much as a ____.",
+"a": "house",
+"alt": [
+"home",
+"mansion",
+"canal house",
+"houses"
+],
+"lies": [
+"castle",
+"small island",
+"warship"
+]
+},
+{
+"cat": "Food",
+"q": "Caesar salad was invented in ____.",
+"a": "Mexico",
+"alt": [
+"tijuana",
+"tijuana mexico"
+],
+"lies": [
+"Italy",
+"Rome",
+"Greece"
+]
+},
+{
+"cat": "Food",
+"q": "Hawaiian pizza was invented in ____.",
+"a": "Canada",
+"alt": [
+"ontario",
+"chatham",
+"chatham ontario"
+],
+"lies": [
+"Hawaii",
+"Australia",
+"Sweden"
+]
+},
+{
+"cat": "Food",
+"q": "German chocolate cake is named after an American man called Sam ____.",
+"a": "German",
+"alt": [
+"germans"
+],
+"lies": [
+"Schwartz",
+"Baker",
+"Coco"
+]
+},
+{
+"cat": "Food",
+"q": "Bananas grow pointing ____.",
+"a": "up",
+"alt": [
+"upward",
+"upwards",
+"up to the sky",
+"skyward",
+"skywards",
+"towards the sun",
+"toward the sun",
+"upside down"
+],
+"lies": [
+"down",
+"sideways",
+"north"
+]
+},
+{
+"cat": "Food",
+"q": "Tomatoes were once feared in Europe and nicknamed 'poison ____'.",
+"a": "apples",
+"alt": [
+"apple"
+],
+"lies": [
+"berries",
+"balls",
+"eggs"
+]
+},
+{
+"cat": "Food",
+"q": "Most 'wasabi' served outside Japan is actually dyed ____.",
+"a": "horseradish",
+"alt": [
+"horse radish"
+],
+"lies": [
+"avocado",
+"peas",
+"mint"
+]
+},
+{
+"cat": "Food",
+"q": "In Japan, eating ____ became a Christmas tradition thanks to a 1970s ad campaign.",
+"a": "KFC",
+"alt": [
+"kentucky fried chicken",
+"fried chicken",
+"chicken",
+"kfc chicken"
+],
+"lies": [
+"pizza",
+"sushi",
+"hot dogs"
+]
+},
+{
+"cat": "Food",
+"q": "Pound cake gets its name from its original recipe: one pound each of ____ ingredients.",
+"a": "four",
+"alt": [
+"4"
+],
+"lies": [
+"three",
+"five",
+"six"
+]
+},
+{
+"cat": "Food",
+"q": "The most expensive spice in the world by weight is ____.",
+"a": "saffron",
+"alt": [
+"saffran"
+],
+"lies": [
+"vanilla",
+"cardamom",
+"black truffle salt"
+]
+},
+{
+"cat": "Food",
+"q": "Almonds grow on a tree that's a close relative of the ____.",
+"a": "peach",
+"alt": [
+"peaches",
+"peach tree",
+"apricot",
+"plum",
+"cherry",
+"nectarine"
+],
+"lies": [
+"oak",
+"walnut",
+"olive"
+]
+},
+{
+"cat": "Food",
+"q": "The original Twinkie filling was ____ flavoured.",
+"a": "banana",
+"alt": [
+"bananas"
+],
+"lies": [
+"strawberry",
+"vanilla",
+"lemon"
+]
+},
+{
+"cat": "Food",
+"q": "Bubble gum is usually pink because that was the only ____ the inventor had on hand.",
+"a": "food colouring",
+"alt": [
+"food coloring",
+"colouring",
+"coloring",
+"dye",
+"food dye",
+"colour",
+"color"
+],
+"lies": [
+"crayon",
+"paint",
+"paper"
+]
+},
+{
+"cat": "Inventions",
+"q": "The Popsicle was invented by accident by an ____-year-old boy.",
+"a": "eleven",
+"alt": [
+"11"
+],
+"lies": [
+"eight",
+"seventy",
+"six"
+]
+},
+{
+"cat": "Inventions",
+"q": "The chocolate chip cookie was invented at the Toll House ____.",
+"a": "inn",
+"alt": [
+"restaurant",
+"hotel",
+"lodge",
+"inn restaurant"
+],
+"lies": [
+"bakery",
+"prison",
+"library"
+]
+},
+{
+"cat": "Inventions",
+"q": "Before rubber erasers, people rubbed out pencil marks with ____.",
+"a": "bread",
+"alt": [
+"breadcrumbs",
+"bread crumbs",
+"stale bread",
+"wax",
+"bread crust"
+],
+"lies": [
+"cheese",
+"potatoes",
+"soap"
+]
+},
+{
+"cat": "Inventions",
+"q": "The first product ever scanned with a barcode at a checkout was a pack of ____.",
+"a": "chewing gum",
+"alt": [
+"gum",
+"juicy fruit",
+"wrigleys gum",
+"wrigley's gum",
+"juicy fruit gum"
+],
+"lies": [
+"cigarettes",
+"batteries",
+"cookies"
+]
+},
+{
+"cat": "Inventions",
+"q": "The microwave oven was invented after radar equipment melted the ____ in an engineer's pocket.",
+"a": "chocolate bar",
+"alt": [
+"chocolate",
+"candy bar",
+"candy",
+"peanut bar",
+"peanut cluster",
+"sweets",
+"chocolate bar"
+],
+"lies": [
+"crayon",
+"lip balm",
+"cheese sandwich"
+]
+},
+{
+"cat": "Inventions",
+"q": "Bubble wrap was originally invented to be sold as textured ____.",
+"a": "wallpaper",
+"alt": [
+"wall paper"
+],
+"lies": [
+"raincoats",
+"bath mats",
+"floor tiles"
+]
+},
+{
+"cat": "Inventions",
+"q": "Play-Doh was first sold as a cleaner for ____.",
+"a": "wallpaper",
+"alt": [
+"wall paper",
+"walls"
+],
+"lies": [
+"carpets",
+"teeth",
+"windows"
+]
+},
+{
+"cat": "Inventions",
+"q": "The electric cotton candy machine was co-invented by a ____.",
+"a": "dentist",
+"alt": [
+"dentists"
+],
+"lies": [
+"baker",
+"clown",
+"sheep farmer"
+]
+},
+{
+"cat": "Inventions",
+"q": "The earliest chainsaws were invented to help doctors during ____.",
+"a": "childbirth",
+"alt": [
+"birth",
+"giving birth",
+"childbirths",
+"labor",
+"labour",
+"delivery",
+"deliveries",
+"surgery",
+"operations",
+"amputations",
+"amputation"
+],
+"lies": [
+"dentistry",
+"tattooing",
+"haircuts"
+]
+},
+{
+"cat": "Inventions",
+"q": "Tissues were first designed as filters for ____.",
+"a": "gas masks",
+"alt": [
+"gas mask",
+"gasmasks",
+"gasmask"
+],
+"lies": [
+"coffee machines",
+"cigarettes",
+"fish tanks"
+]
+},
+{
+"cat": "Inventions",
+"q": "The designer of the ____ can had some of his ashes buried in one.",
+"a": "Pringles",
+"alt": [
+"pringle",
+"pringles chips"
+],
+"lies": [
+"soup",
+"paint",
+"tennis ball"
+]
+},
+{
+"cat": "Inventions",
+"q": "The world's first webcam was set up to keep an eye on a ____.",
+"a": "coffee pot",
+"alt": [
+"coffeepot",
+"coffee machine",
+"coffee maker",
+"coffee"
+],
+"lies": [
+"fish tank",
+"parking space",
+"sleeping baby"
+]
+},
+{
+"cat": "Inventions",
+"q": "The first item ever sold on eBay was a broken ____.",
+"a": "laser pointer",
+"alt": [
+"laser",
+"laserpointer"
+],
+"lies": [
+"toaster",
+"guitar",
+"calculator"
+]
+},
+{
+"cat": "Inventions",
+"q": "The very first video uploaded to YouTube was called 'Me at the ____'.",
+"a": "zoo",
+"alt": [
+"the zoo"
+],
+"lies": [
+"beach",
+"mall",
+"gym"
+]
+},
+{
+"cat": "Inventions",
+"q": "The very first computer 'bug' was a real ____.",
+"a": "moth",
+"alt": [
+"moths",
+"insect",
+"bug"
+],
+"lies": [
+"cockroach",
+"spider",
+"beetle"
+]
+},
+{
+"cat": "Inventions",
+"q": "The first mechanical alarm clock, built in 1787, could only ring at ____ a.m.",
+"a": "four",
+"alt": [
+"4",
+"4am",
+"4:00"
+],
+"lies": [
+"six",
+"seven",
+"five"
+]
+},
+{
+"cat": "Inventions",
+"q": "The original patent for the fire hydrant was lost in a ____.",
+"a": "fire",
+"alt": [
+"fires",
+"blaze"
+],
+"lies": [
+"flood",
+"shipwreck",
+"card game"
+]
+},
+{
+"cat": "Inventions",
+"q": "The first known vending machine, in ancient Egypt, dispensed ____.",
+"a": "holy water",
+"alt": [
+"water",
+"sacred water"
+],
+"lies": [
+"wine",
+"perfume",
+"olive oil"
+]
+},
+{
+"cat": "Inventions",
+"q": "The Ferris wheel was built for the 1893 World's Fair to outdo the ____.",
+"a": "Eiffel Tower",
+"alt": [
+"eiffel"
+],
+"lies": [
+"Statue of Liberty",
+"Great Wall",
+"Big Ben"
+]
+},
+{
+"cat": "Inventions",
+"q": "Mr. Potato Head was the first toy ever advertised on ____.",
+"a": "television",
+"alt": [
+"tv",
+"telly",
+"the tv"
+],
+"lies": [
+"radio",
+"billboards",
+"cereal boxes"
+]
+},
+{
+"cat": "Inventions",
+"q": "Before 1954, most American stop signs were ____.",
+"a": "yellow",
+"alt": [
+"white"
+],
+"lies": [
+"blue",
+"green",
+"purple"
+]
+},
+{
+"cat": "Inventions",
+"q": "The world's first traffic light, in London in 1868, was powered by ____ and later exploded.",
+"a": "gas",
+"alt": [
+"gas lamp",
+"gaslight",
+"gas lamps",
+"natural gas",
+"coal gas"
+],
+"lies": [
+"steam",
+"candles",
+"horses"
+]
+},
+{
+"cat": "Inventions",
+"q": "The inventor of the modern disc-golf frisbee had his ashes moulded into ____.",
+"a": "frisbees",
+"alt": [
+"frisbee",
+"discs",
+"flying discs",
+"disc"
+],
+"lies": [
+"bowling balls",
+"trophies",
+"garden gnomes"
+]
+},
+{
+"cat": "Inventions",
+"q": "The Slinky was invented by a naval ____.",
+"a": "engineer",
+"alt": [
+"engineers",
+"mechanical engineer"
+],
+"lies": [
+"chef",
+"admiral",
+"diver"
+]
+},
+{
+"cat": "Inventions",
+"q": "The Super Soaker water gun was invented by an engineer who worked for ____.",
+"a": "NASA",
+"alt": [
+"nasa jpl",
+"jpl",
+"the air force",
+"air force"
+],
+"lies": [
+"a toy company",
+"a fire brigade",
+"a submarine base"
+]
+},
+{
+"cat": "History",
+"q": "The shortest war in history, between Britain and ____, lasted under 45 minutes.",
+"a": "Zanzibar",
+"alt": [
+"zanzibar sultanate"
+],
+"lies": [
+"Iceland",
+"Luxembourg",
+"Tahiti"
+]
+},
+{
+"cat": "History",
+"q": "In 1932, the Australian army fought a 'war' against ____ and lost.",
+"a": "emus",
+"alt": [
+"emu",
+"the emus"
+],
+"lies": [
+"kangaroos",
+"koalas",
+"crocodiles"
+]
+},
+{
+"cat": "History",
+"q": "Napoleon was once attacked by a swarm of ____ during a hunting party.",
+"a": "rabbits",
+"alt": [
+"rabbit",
+"bunnies",
+"bunny",
+"hares"
+],
+"lies": [
+"bees",
+"ducks",
+"squirrels"
+]
+},
+{
+"cat": "History",
+"q": "Cleopatra lived closer in time to the ____ than to the building of the Great Pyramid.",
+"a": "moon landing",
+"alt": [
+"the moon landing",
+"moon landings",
+"apollo 11",
+"landing on the moon",
+"first moon landing"
+],
+"lies": [
+"invention of writing",
+"building of Stonehenge",
+"last Ice Age"
+]
+},
+{
+"cat": "History",
+"q": "Oxford University is older than the ____ Empire.",
+"a": "Aztec",
+"alt": [
+"aztecs"
+],
+"lies": [
+"Roman",
+"Byzantine",
+"Persian"
+]
+},
+{
+"cat": "History",
+"q": "Woolly mammoths were still alive when the Great ____ of Giza was built.",
+"a": "Pyramid",
+"alt": [
+"pyramids"
+],
+"lies": [
+"Lighthouse",
+"Wall",
+"Temple"
+]
+},
+{
+"cat": "History",
+"q": "Ancient Romans used ____ as mouthwash.",
+"a": "urine",
+"alt": [
+"pee",
+"wee",
+"human urine",
+"piss"
+],
+"lies": [
+"seawater",
+"goat milk",
+"vinegar"
+]
+},
+{
+"cat": "History",
+"q": "In ancient Egypt, killing a ____, even by accident, could be punished by death.",
+"a": "cat",
+"alt": [
+"cats"
+],
+"lies": [
+"frog",
+"dog",
+"camel"
+]
+},
+{
+"cat": "History",
+"q": "Before alarm clocks, 'knocker-uppers' woke people by shooting ____ at their windows.",
+"a": "peas",
+"alt": [
+"pea",
+"dried peas",
+"dry peas"
+],
+"lies": [
+"marbles",
+"carrots",
+"snowballs"
+]
+},
+{
+"cat": "History",
+"q": "The first-ever speeding ticket, in 1896, was for going ____ mph.",
+"a": "eight",
+"alt": [
+"8"
+],
+"lies": [
+"four",
+"twelve",
+"twenty"
+]
+},
+{
+"cat": "History",
+"q": "Sweden's 1967 switch to driving on the right happened in a single day, known as '____ Day'.",
+"a": "H",
+"alt": [
+"dagen h",
+"h-day",
+"h day",
+"hogertrafik"
+],
+"lies": [
+"Flip",
+"Swap",
+"Right"
+]
+},
+{
+"cat": "History",
+"q": "The oldest known wooden ____, about 5,000 years old, was found in a marsh in Slovenia.",
+"a": "wheel",
+"alt": [
+"wheels"
+],
+"lies": [
+"spoon",
+"toothbrush",
+"chair"
+]
+},
+{
+"cat": "History",
+"q": "Workers who built Egypt's pyramids were given daily rations of ____.",
+"a": "beer",
+"alt": [
+"bread",
+"beer and bread",
+"bread and beer",
+"onions"
+],
+"lies": [
+"gold coins",
+"perfume",
+"camel milk"
+]
+},
+{
+"cat": "History",
+"q": "In 1518, dozens of people in Strasbourg were struck by a strange plague of uncontrollable ____.",
+"a": "dancing",
+"alt": [
+"dance",
+"dancing mania"
+],
+"lies": [
+"sneezing",
+"laughing",
+"hiccups"
+]
+},
+{
+"cat": "History",
+"q": "In 1919, a giant wave of ____ flooded the streets of Boston.",
+"a": "molasses",
+"alt": [
+"syrup",
+"treacle",
+"molases"
+],
+"lies": [
+"beer",
+"milk",
+"soup"
+]
+},
+{
+"cat": "History",
+"q": "In 1814, a flood of ____ burst out of a brewery and swept through a London street.",
+"a": "beer",
+"alt": [
+"ale",
+"porter"
+],
+"lies": [
+"gin",
+"milk",
+"whisky"
+]
+},
+{
+"cat": "History",
+"q": "In 1962, an epidemic of ____ spread through schools in Tanzania, forcing some to close.",
+"a": "laughter",
+"alt": [
+"laughing",
+"giggles",
+"giggling",
+"laughs"
+],
+"lies": [
+"sneezing",
+"hiccups",
+"sleepwalking"
+]
+},
+{
+"cat": "History",
+"q": "The ancient Romans worshipped a goddess of the ____.",
+"a": "sewers",
+"alt": [
+"sewer",
+"sewage",
+"sewer system",
+"drains",
+"toilets",
+"cloaca maxima"
+],
+"lies": [
+"bathtubs",
+"sandals",
+"hiccups"
+]
+},
+{
+"cat": "History",
+"q": "In medieval Europe, animals like pigs were sometimes put on ____ for their crimes.",
+"a": "trial",
+"alt": [
+"trials",
+"court"
+],
+"lies": [
+"the throne",
+"horseback",
+"display"
+]
+},
+{
+"cat": "History",
+"q": "The Great Fire of London in 1666 started in a ____.",
+"a": "bakery",
+"alt": [
+"bakers",
+"baker's shop",
+"bakehouse",
+"baker"
+],
+"lies": [
+"brewery",
+"church",
+"candle shop"
+]
+},
+{
+"cat": "History",
+"q": "In 2009, the government of the ____ held a cabinet meeting underwater.",
+"a": "Maldives",
+"alt": [
+"maldive islands",
+"maldive"
+],
+"lies": [
+"Bahamas",
+"Fiji",
+"Seychelles"
+]
+},
+{
+"cat": "Places",
+"q": "The Eiffel Tower can grow more than 15 cm taller in ____.",
+"a": "summer",
+"alt": [
+"the summer",
+"heat",
+"hot weather",
+"summertime",
+"the heat"
+],
+"lies": [
+"winter",
+"storms",
+"the morning"
+]
+},
+{
+"cat": "Places",
+"q": "When it was new, the Statue of Liberty was a shiny ____ colour.",
+"a": "copper",
+"alt": [
+"brown",
+"reddish brown",
+"bronze",
+"orange",
+"red",
+"penny"
+],
+"lies": [
+"gold",
+"silver",
+"white"
+]
+},
+{
+"cat": "Places",
+"q": "The Eiffel Tower was originally supposed to be taken down after ____ years.",
+"a": "twenty",
+"alt": [
+"20"
+],
+"lies": [
+"five",
+"one",
+"ten"
+]
+},
+{
+"cat": "Places",
+"q": "Behind Mount Rushmore's faces is a hidden room called the Hall of ____.",
+"a": "Records",
+"alt": [
+"record"
+],
+"lies": [
+"Secrets",
+"Presidents",
+"Heroes"
+]
+},
+{
+"cat": "Places",
+"q": "'Big Ben' is actually the name of the ____, not the tower.",
+"a": "bell",
+"alt": [
+"great bell",
+"the bell",
+"bells"
+],
+"lies": [
+"clock hands",
+"clock face",
+"staircase"
+]
+},
+{
+"cat": "Places",
+"q": "The famous 'HOLLYWOOD' sign originally read '____'.",
+"a": "Hollywoodland",
+"alt": [
+"hollywood land"
+],
+"lies": [
+"Hollywood Hills",
+"Hollywoodville",
+"Hollywood Studios"
+]
+},
+{
+"cat": "Geography",
+"q": "Russia has a bigger surface area than ____.",
+"a": "Pluto",
+"alt": [
+"the dwarf planet pluto"
+],
+"lies": [
+"Mercury",
+"the Moon",
+"Mars"
+]
+},
+{
+"cat": "Geography",
+"q": "Canada has more ____ than the rest of the world combined.",
+"a": "lakes",
+"alt": [
+"lake"
+],
+"lies": [
+"donut shops",
+"castles",
+"volcanoes"
+]
+},
+{
+"cat": "Geography",
+"q": "The world's shortest scheduled flight, between two Scottish islands, is timetabled to take about ____.",
+"a": "two minutes",
+"alt": [
+"2 minutes",
+"1 minute",
+"one minute",
+"90 seconds",
+"1.5 minutes",
+"a minute",
+"2 mins",
+"2 min",
+"one and a half minutes",
+"a minute and a half"
+],
+"lies": [
+"eight minutes",
+"thirty seconds",
+"fifteen minutes"
+]
+},
+{
+"cat": "Geography",
+"q": "Australia is wider than the ____.",
+"a": "Moon",
+"alt": [
+"the moon",
+"moon's diameter"
+],
+"lies": [
+"Sahara Desert",
+"Atlantic Ocean",
+"planet Mars"
+]
+},
+{
+"cat": "Geography",
+"q": "There's a village in Norway called ____.",
+"a": "Hell",
+"alt": [
+"hel"
+],
+"lies": [
+"Oops",
+"Pizza",
+"Dracula"
+]
+},
+{
+"cat": "Geography",
+"q": "____ is the only country whose national flag isn't a rectangle or a square.",
+"a": "Nepal",
+"alt": [
+"nepal's"
+],
+"lies": [
+"Switzerland",
+"Bhutan",
+"Qatar"
+]
+},
+{
+"cat": "Geography",
+"q": "Vatican City has the world's only cash machine that offers instructions in ____.",
+"a": "Latin",
+"alt": [
+"latin language"
+],
+"lies": [
+"Greek",
+"Hebrew",
+"Morse code"
+]
+},
+{
+"cat": "Geography",
+"q": "Thanks to its overseas territories, the country with the most time zones (12) is ____.",
+"a": "France",
+"alt": [
+"french republic"
+],
+"lies": [
+"Russia",
+"the USA",
+"Australia"
+]
+},
+{
+"cat": "Geography",
+"q": "Finland has around 3 million ____ for its 5.5 million people.",
+"a": "saunas",
+"alt": [
+"sauna"
+],
+"lies": [
+"reindeer",
+"snowmobiles",
+"lakes"
+]
+},
+{
+"cat": "Geography",
+"q": "Bhutan measures its progress using Gross National ____.",
+"a": "Happiness",
+"alt": [
+"happy"
+],
+"lies": [
+"Kindness",
+"Smiles",
+"Harmony"
+]
+},
+{
+"cat": "Geography",
+"q": "The Canary Islands are named after ____, not birds.",
+"a": "dogs",
+"alt": [
+"dog",
+"hounds",
+"big dogs",
+"wild dogs"
+],
+"lies": [
+"a sailor",
+"a volcano",
+"a type of wine"
+]
+},
+{
+"cat": "Geography",
+"q": "The largest desert on Earth is ____.",
+"a": "Antarctica",
+"alt": [
+"antarctic",
+"the antarctic",
+"antarctic desert"
+],
+"lies": [
+"the Sahara",
+"the Gobi",
+"Siberia"
+]
+},
+{
+"cat": "Geography",
+"q": "Alaska is the northernmost, westernmost and ____ US state.",
+"a": "easternmost",
+"alt": [
+"eastern most",
+"most eastern",
+"eastern-most"
+],
+"lies": [
+"oldest",
+"flattest",
+"smallest"
+]
+},
+{
+"cat": "Geography",
+"q": "Reno, Nevada is further ____ than Los Angeles.",
+"a": "west",
+"alt": [
+"west than la",
+"western"
+],
+"lies": [
+"south",
+"east",
+"below sea level"
+]
+},
+{
+"cat": "Geography",
+"q": "The spot in the ocean farthest from any land is called Point ____.",
+"a": "Nemo",
+"alt": [
+"nemo"
+],
+"lies": [
+"Zero",
+"Lonely",
+"Blue"
+]
+},
+{
+"cat": "Geography",
+"q": "Liechtenstein and Uzbekistan are the world's only two ____ landlocked countries.",
+"a": "doubly",
+"alt": [
+"double",
+"double-landlocked",
+"doubly-landlocked",
+"twice"
+],
+"lies": [
+"triply",
+"permanently",
+"partially"
+]
+},
+{
+"cat": "Geography",
+"q": "Sudan has more ancient ____ than Egypt.",
+"a": "pyramids",
+"alt": [
+"pyramid"
+],
+"lies": [
+"mummies",
+"temples",
+"sphinxes"
+]
+},
+{
+"cat": "Geography",
+"q": "____ is the only US state with a one-syllable name.",
+"a": "Maine",
+"alt": [
+"main"
+],
+"lies": [
+"Utah",
+"Iowa",
+"Guam"
+]
+},
+{
+"cat": "Geography",
+"q": "The national flag of ____ features an AK-47 rifle.",
+"a": "Mozambique",
+"alt": [
+"mozambik"
+],
+"lies": [
+"Chad",
+"Angola",
+"Libya"
+]
+},
+{
+"cat": "Weird Laws",
+"q": "In Switzerland, it's illegal to own just one ____.",
+"a": "guinea pig",
+"alt": [
+"guinea pigs",
+"guineapig",
+"budgie",
+"parrot",
+"budgerigar"
+],
+"lies": [
+"cat",
+"hamster",
+"snake"
+]
+},
+{
+"cat": "Weird Laws",
+"q": "Since 1992, selling ____ has been banned in Singapore.",
+"a": "chewing gum",
+"alt": [
+"gum",
+"bubble gum",
+"bubblegum"
+],
+"lies": [
+"hot sauce",
+"water pistols",
+"yo-yos"
+]
+},
+{
+"cat": "Weird Laws",
+"q": "In Venice, it's illegal to feed the ____ in St Mark's Square.",
+"a": "pigeons",
+"alt": [
+"pigeon",
+"birds",
+"doves"
+],
+"lies": [
+"cats",
+"tourists",
+"gondoliers"
+]
+},
+{
+"cat": "Weird Laws",
+"q": "The British monarch technically owns all unmarked mute ____ in open water.",
+"a": "swans",
+"alt": [
+"swan"
+],
+"lies": [
+"ducks",
+"geese",
+"otters"
+]
+},
+{
+"cat": "Weird Laws",
+"q": "In Carmel-by-the-Sea, California, you technically need a permit to wear ____.",
+"a": "high heels",
+"alt": [
+"heels",
+"high heeled shoes",
+"stilettos",
+"high-heeled shoes"
+],
+"lies": [
+"flip-flops",
+"sombreros",
+"roller skates"
+]
+},
+{
+"cat": "Weird Laws",
+"q": "Japan's 'Metabo Law' requires adults aged 40 to 74 to have their ____ measured every year.",
+"a": "waist",
+"alt": [
+"waistline",
+"waists",
+"waist size",
+"belly",
+"stomach",
+"tummy",
+"waist circumference",
+"gut"
+],
+"lies": [
+"height",
+"IQ",
+"feet"
+]
+},
+{
+"cat": "Weird Laws",
+"q": "In Denmark, parents must pick their baby's name from a government-approved ____ or ask for permission.",
+"a": "list",
+"alt": [
+"list of names",
+"name list",
+"approved list",
+"names list"
+],
+"lies": [
+"lottery",
+"dictionary",
+"song"
+]
+},
+{
+"cat": "Weird Laws",
+"q": "Citizens of Monaco are banned from ____ in their own country's famous casino.",
+"a": "gambling",
+"alt": [
+"gamble",
+"betting",
+"playing",
+"entering",
+"going in"
+],
+"lies": [
+"wearing hats",
+"singing",
+"dancing"
+]
+},
+{
+"cat": "Sports",
+"q": "____ was an Olympic event from 1900 to 1920.",
+"a": "Tug of war",
+"alt": [
+"tug-of-war",
+"tugofwar"
+],
+"lies": [
+"Pillow fighting",
+"Hide and seek",
+"Leapfrog"
+]
+},
+{
+"cat": "Sports",
+"q": "From 1912 to 1948, the Olympics also handed out medals for ____.",
+"a": "art",
+"alt": [
+"arts",
+"painting",
+"sculpture",
+"music",
+"literature",
+"poetry",
+"architecture",
+"art competitions"
+],
+"lies": [
+"cooking",
+"cheerleading",
+"gardening"
+]
+},
+{
+"cat": "Sports",
+"q": "Olympic gold medals are made mostly of ____.",
+"a": "silver",
+"alt": [
+"silver"
+],
+"lies": [
+"bronze",
+"copper",
+"brass"
+]
+},
+{
+"cat": "Sports",
+"q": "The first sport ever played on the Moon was ____.",
+"a": "golf",
+"alt": [
+"golfing"
+],
+"lies": [
+"frisbee",
+"baseball",
+"tennis"
+]
+},
+{
+"cat": "Sports",
+"q": "The first basketball hoops were ____ baskets.",
+"a": "peach",
+"alt": [
+"peaches",
+"fruit"
+],
+"lies": [
+"laundry",
+"picnic",
+"bread"
+]
+},
+{
+"cat": "Sports",
+"q": "The longest tennis match ever, at Wimbledon in 2010, lasted over ____ hours.",
+"a": "eleven",
+"alt": [
+"11"
+],
+"lies": [
+"six",
+"fifteen",
+"twenty"
+]
+},
+{
+"cat": "Sports",
+"q": "In the ancient Olympics, athletes competed ____.",
+"a": "naked",
+"alt": [
+"nude",
+"in the nude",
+"without clothes",
+"with no clothes",
+"naked"
+],
+"lies": [
+"blindfolded",
+"on stilts",
+"in togas"
+]
+},
+{
+"cat": "Sports",
+"q": "The national summer sport of Canada is ____.",
+"a": "lacrosse",
+"alt": [
+"lacross"
+],
+"lies": [
+"curling",
+"baseball",
+"canoeing"
+]
+},
+{
+"cat": "Sports",
+"q": "The national sport of Bhutan is ____.",
+"a": "archery",
+"alt": [
+"bow and arrow"
+],
+"lies": [
+"yak racing",
+"kite fighting",
+"polo"
+]
+},
+{
+"cat": "Sports",
+"q": "Every year in Gloucestershire, England, people race down a steep hill chasing a wheel of ____.",
+"a": "cheese",
+"alt": [
+"double gloucester",
+"cheddar"
+],
+"lies": [
+"bread",
+"ham",
+"pie"
+]
+},
+{
+"cat": "Sports",
+"q": "Finland hosts a world championship for carrying your ____.",
+"a": "wife",
+"alt": [
+"wives",
+"spouse",
+"partner",
+"husband"
+],
+"lies": [
+"sauna",
+"grandma",
+"fridge"
+]
+},
+{
+"cat": "Sports",
+"q": "Every August, a town in Spain holds a festival where people pelt each other with ____.",
+"a": "tomatoes",
+"alt": [
+"tomato"
+],
+"lies": [
+"potatoes",
+"cabbages",
+"pies"
+]
+},
+{
+"cat": "People",
+"q": "Abraham Lincoln is in the National Hall of Fame for ____.",
+"a": "wrestling",
+"alt": [
+"wrestler"
+],
+"lies": [
+"boxing",
+"chess",
+"axe throwing"
+]
+},
+{
+"cat": "People",
+"q": "Abraham Lincoln is the only US president to have held a ____.",
+"a": "patent",
+"alt": [
+"patents"
+],
+"lies": [
+"pilot's license",
+"black belt",
+"circus license"
+]
+},
+{
+"cat": "People",
+"q": "In 1952, Albert Einstein was offered the job of President of ____.",
+"a": "Israel",
+"alt": [
+"israel"
+],
+"lies": [
+"Germany",
+"Switzerland",
+"the United States"
+]
+},
+{
+"cat": "People",
+"q": "Winston Churchill's mother was ____.",
+"a": "American",
+"alt": [
+"from america",
+"an american",
+"from the us",
+"from new york",
+"usa",
+"us",
+"from the usa",
+"new yorker"
+],
+"lies": [
+"French",
+"Canadian",
+"a circus performer"
+]
+},
+{
+"cat": "People",
+"q": "Theodore Roosevelt's children kept a pet ____ named Josiah in the White House.",
+"a": "badger",
+"alt": [
+"badgers"
+],
+"lies": [
+"raccoon",
+"parrot",
+"skunk"
+]
+},
+{
+"cat": "People",
+"q": "President Calvin Coolidge kept a pet ____ named Rebecca.",
+"a": "raccoon",
+"alt": [
+"raccoons",
+"racoon",
+"racoons"
+],
+"lies": [
+"hippo",
+"goose",
+"alligator"
+]
+},
+{
+"cat": "People",
+"q": "Leonardo da Vinci wrote most of his notes in ____ writing.",
+"a": "mirror",
+"alt": [
+"backwards",
+"reverse",
+"mirror-image",
+"backward",
+"mirrored",
+"mirror image"
+],
+"lies": [
+"invisible",
+"upside-down",
+"diagonal"
+]
+},
+{
+"cat": "People",
+"q": "Agatha Christie learned all about ____ while working in a hospital pharmacy.",
+"a": "poisons",
+"alt": [
+"poison",
+"poisoning"
+],
+"lies": [
+"disguises",
+"bank robbery",
+"knots"
+]
+},
+{
+"cat": "People",
+"q": "During World War II, the future Queen Elizabeth II trained as a ____.",
+"a": "mechanic",
+"alt": [
+"truck mechanic",
+"driver",
+"truck driver",
+"mechanics",
+"army mechanic",
+"lorry driver"
+],
+"lies": [
+"pilot",
+"codebreaker",
+"spy"
+]
+},
+{
+"cat": "People",
+"q": "Inventor Nikola Tesla said he had fallen in love with a ____.",
+"a": "pigeon",
+"alt": [
+"bird",
+"white pigeon",
+"dove"
+],
+"lies": [
+"lamp",
+"robot",
+"cat"
+]
+},
+{
+"cat": "People",
+"q": "Marie Curie's notebooks are still so ____ that they're stored in lead-lined boxes.",
+"a": "radioactive",
+"alt": [
+"radiated",
+"irradiated"
+],
+"lies": [
+"sticky",
+"smelly",
+"haunted"
+]
+},
+{
+"cat": "People",
+"q": "After Albert Einstein died, a pathologist secretly kept his ____.",
+"a": "brain",
+"alt": [
+"brains"
+],
+"lies": [
+"violin",
+"glasses",
+"pipe"
+]
+},
+{
+"cat": "People",
+"q": "Mark Twain was born, and died, in years when ____ was visible from Earth.",
+"a": "Halley's Comet",
+"alt": [
+"halleys comet",
+"halley comet",
+"a comet",
+"the comet",
+"comet",
+"halley's"
+],
+"lies": [
+"a total eclipse",
+"the Northern Lights",
+"a blue moon"
+]
+},
+{
+"cat": "People",
+"q": "The Mona Lisa has no visible ____.",
+"a": "eyebrows",
+"alt": [
+"eyebrow",
+"brows",
+"eyelashes",
+"eye brows",
+"eyelash"
+],
+"lies": [
+"hands",
+"nose",
+"hair"
+]
+},
+{
+"cat": "People",
+"q": "The name 'Pluto' was suggested by an 11-year-old schoolgirl from ____, England.",
+"a": "Oxford",
+"alt": [
+"oxford"
+],
+"lies": [
+"Liverpool",
+"Cambridge",
+"Bristol"
+]
+},
+{
+"cat": "Science",
+"q": "Humans share roughly 60% of their genes with ____.",
+"a": "bananas",
+"alt": [
+"banana",
+"fruit flies",
+"fruit fly",
+"chickens",
+"chicken"
+],
+"lies": [
+"carrots",
+"mushrooms",
+"jellyfish"
+]
+},
+{
+"cat": "Science",
+"q": "Your stomach gets a brand new lining every few ____.",
+"a": "days",
+"alt": [
+"day"
+],
+"lies": [
+"years",
+"months",
+"hours"
+]
+},
+{
+"cat": "Science",
+"q": "The ____ of your eye takes oxygen straight from the air instead of from blood.",
+"a": "cornea",
+"alt": [
+"corneas"
+],
+"lies": [
+"iris",
+"pupil",
+"retina"
+]
+},
+{
+"cat": "Science",
+"q": "When hot water freezes faster than cold water, it's called the ____ effect.",
+"a": "Mpemba",
+"alt": [
+"mpemba"
+],
+"lies": [
+"Frostby",
+"Leidenfrost",
+"Kelvin"
+]
+},
+{
+"cat": "Science",
+"q": "A day on Venus is longer than a ____ on Venus.",
+"a": "year",
+"alt": [
+"years"
+],
+"lies": [
+"week",
+"month",
+"decade"
+]
+},
+{
+"cat": "Science",
+"q": "Scientists think it may rain ____ on Neptune and Uranus.",
+"a": "diamonds",
+"alt": [
+"diamond"
+],
+"lies": [
+"glass",
+"gold",
+"iron"
+]
+},
+{
+"cat": "Science",
+"q": "Bananas are very slightly ____.",
+"a": "radioactive",
+"alt": [
+"radioactive"
+],
+"lies": [
+"magnetic",
+"poisonous",
+"explosive"
+]
+},
+{
+"cat": "Science",
+"q": "A bolt of lightning is about five times hotter than the surface of the ____.",
+"a": "Sun",
+"alt": [
+"the sun"
+],
+"lies": [
+"Moon",
+"Venus",
+"Mars"
+]
+},
+{
+"cat": "Science",
+"q": "Sound travels about four times faster through ____ than through air.",
+"a": "water",
+"alt": [
+"seawater",
+"sea water",
+"liquid water"
+],
+"lies": [
+"glass",
+"steel",
+"wood"
+]
+},
+{
+"cat": "Science",
+"q": "In space, astronauts can grow up to 3% ____.",
+"a": "taller",
+"alt": [
+"tall",
+"in height",
+"longer",
+"height"
+],
+"lies": [
+"smarter",
+"heavier",
+"hairier"
+]
+},
+{
+"cat": "Science",
+"q": "Mars looks red because its surface is covered in ____.",
+"a": "rust",
+"alt": [
+"iron oxide",
+"iron",
+"rusty dust",
+"rusty iron"
+],
+"lies": [
+"lava",
+"copper",
+"algae"
+]
+},
+{
+"cat": "Science",
+"q": "Astronauts say that space smells like ____.",
+"a": "seared steak",
+"alt": [
+"steak",
+"burnt steak",
+"burning metal",
+"hot metal",
+"welding fumes",
+"gunpowder",
+"burnt metal",
+"metal",
+"seared meat"
+],
+"lies": [
+"vanilla",
+"wet dog",
+"fresh laundry"
+]
+},
+{
+"cat": "Science",
+"q": "Venus spins ____ compared to most planets.",
+"a": "backwards",
+"alt": [
+"backward",
+"the other way",
+"in reverse",
+"the opposite way",
+"clockwise",
+"retrograde",
+"opposite"
+],
+"lies": [
+"twice as fast",
+"sideways",
+"not at all"
+]
+},
+{
+"cat": "Science",
+"q": "Saturn is less dense than ____, so it would float in a big enough bathtub.",
+"a": "water",
+"alt": [
+"water"
+],
+"lies": [
+"cork",
+"helium",
+"feathers"
+]
+},
+{
+"cat": "Science",
+"q": "Babies are born without bony ____.",
+"a": "kneecaps",
+"alt": [
+"knee caps",
+"kneecap",
+"patellas",
+"patella",
+"knees"
+],
+"lies": [
+"ribs",
+"toes",
+"ankles"
+]
+},
+{
+"cat": "Science",
+"q": "The hardest substance in the human body is ____.",
+"a": "tooth enamel",
+"alt": [
+"enamel",
+"teeth",
+"tooth"
+],
+"lies": [
+"kneecap",
+"skull",
+"fingernail"
+]
+},
+{
+"cat": "Science",
+"q": "Light from the Sun takes about ____ to reach Earth.",
+"a": "eight minutes",
+"alt": [
+"8 minutes",
+"8 min",
+"8 mins",
+"eight mins",
+"8 minutes 20 seconds",
+"8.3 minutes"
+],
+"lies": [
+"eight seconds",
+"eight hours",
+"two days"
+]
+},
+{
+"cat": "Space",
+"q": "The first animal to orbit the Earth was a ____ named Laika.",
+"a": "dog",
+"alt": [
+"stray dog",
+"dogs",
+"puppy",
+"doggo"
+],
+"lies": [
+"monkey",
+"cat",
+"rabbit"
+]
+},
+{
+"cat": "Space",
+"q": "After returning from the Moon, the Apollo 11 astronauts had to fill out a ____ form.",
+"a": "customs",
+"alt": [
+"customs declaration",
+"custom"
+],
+"lies": [
+"tax",
+"jury duty",
+"lost property"
+]
+},
+{
+"cat": "Space",
+"q": "A rainbow made by moonlight is called a ____.",
+"a": "moonbow",
+"alt": [
+"moon bow",
+"lunar rainbow"
+],
+"lies": [
+"lunabow",
+"nightbow",
+"silverbow"
+]
+},
+{
+"cat": "Space",
+"q": "The Moon has earthquakes of its own, called ____.",
+"a": "moonquakes",
+"alt": [
+"moon quakes",
+"moonquake"
+],
+"lies": [
+"moonshakes",
+"craterquakes",
+"lunar rumbles"
+]
+},
+{
+"cat": "Words",
+"q": "____ is the only letter that doesn't appear in any US state name.",
+"a": "Q",
+"alt": [
+"the letter q",
+"letter q"
+],
+"lies": [
+"Z",
+"X",
+"J"
+]
+},
+{
+"cat": "Words",
+"q": "The only number whose letters are in alphabetical order is ____.",
+"a": "forty",
+"alt": [
+"40"
+],
+"lies": [
+"eight",
+"hundred",
+"six"
+]
+},
+{
+"cat": "Words",
+"q": "Gadsby, a 50,000-word novel from 1939, never once uses the letter ____.",
+"a": "E",
+"alt": [
+"the letter e",
+"letter e"
+],
+"lies": [
+"A",
+"S",
+"T"
+]
+},
+{
+"cat": "Words",
+"q": "The dot over a lowercase 'i' is called a ____.",
+"a": "tittle",
+"alt": [
+"tittles",
+"title"
+],
+"lies": [
+"dimple",
+"speck",
+"pip"
+]
+},
+{
+"cat": "Words",
+"q": "The '#' symbol is officially known as the ____.",
+"a": "octothorpe",
+"alt": [
+"octothorp",
+"hash",
+"number sign",
+"pound sign",
+"hashtag",
+"hash sign"
+],
+"lies": [
+"quadrant",
+"tic-tac",
+"gridlet"
+]
+},
+{
+"cat": "Words",
+"q": "The plastic tip on the end of a shoelace is called an ____.",
+"a": "aglet",
+"alt": [
+"aiglet",
+"aglets"
+],
+"lies": [
+"eyelet",
+"anklet",
+"ogle"
+]
+},
+{
+"cat": "Words",
+"q": "The fear of long words is called ____.",
+"a": "hippopotomonstrosesquippedaliophobia",
+"alt": [
+"sesquipedalophobia",
+"hippopotomonstrosesquipedaliophobia"
+],
+"lies": [
+"longophobia",
+"verbosiphobia",
+"lexiphobia"
+]
+},
+{
+"cat": "Words",
+"q": "The pleasant smell of rain on dry ground is called ____.",
+"a": "petrichor",
+"alt": [
+"petricor"
+],
+"lies": [
+"ozonia",
+"terravel",
+"dewscent"
+]
+},
+{
+"cat": "Words",
+"q": "The little groove between your nose and upper lip is called the ____.",
+"a": "philtrum",
+"alt": [
+"filtrum"
+],
+"lies": [
+"nasolum",
+"cupid's gutter",
+"lipline"
+]
+},
+{
+"cat": "Words",
+"q": "Temporarily forgetting a word is called ____.",
+"a": "lethologica",
+"alt": [
+"tip of the tongue",
+"tip of tongue"
+],
+"lies": [
+"blankonia",
+"verbalysis",
+"wordrift"
+]
+},
+{
+"cat": "Words",
+"q": "The word 'nerd' first appeared in print in a book by ____.",
+"a": "Dr. Seuss",
+"alt": [
+"dr seuss",
+"seuss",
+"doctor seuss",
+"theodor geisel"
+],
+"lies": [
+"Roald Dahl",
+"Mark Twain",
+"Charles Dickens"
+]
+},
+{
+"cat": "Words",
+"q": "The word 'robot' comes from a Czech word meaning ____.",
+"a": "forced labour",
+"alt": [
+"forced labor",
+"labor",
+"labour",
+"work",
+"drudgery",
+"servitude",
+"slave labor",
+"slave labour",
+"hard work",
+"slave"
+],
+"lies": [
+"metal man",
+"obedient",
+"iron worker"
+]
+},
+{
+"cat": "Words",
+"q": "The name 'Wendy' became popular thanks to the book ____.",
+"a": "Peter Pan",
+"alt": [
+"peter and wendy",
+"peterpan"
+],
+"lies": [
+"Alice in Wonderland",
+"Little Women",
+"Mary Poppins"
+]
+},
+{
+"cat": "Words",
+"q": "The word 'muscle' comes from the Latin for 'little ____'.",
+"a": "mouse",
+"alt": [
+"mice"
+],
+"lies": [
+"worm",
+"snake",
+"rope"
+]
+},
+{
+"cat": "Words",
+"q": "The word 'avocado' comes from an Aztec word meaning ____.",
+"a": "testicle",
+"alt": [
+"testicles",
+"balls",
+"testes",
+"testicle tree"
+],
+"lies": [
+"green egg",
+"soft stone",
+"tree butter"
+]
+},
+{
+"cat": "Words",
+"q": "'OK' began as a joke abbreviation of 'oll ____'.",
+"a": "korrect",
+"alt": [
+"correct",
+"korect",
+"korrekt"
+],
+"lies": [
+"kay",
+"klear",
+"kool"
+]
+},
+{
+"cat": "Words",
+"q": "The word 'salary' comes from the Latin word for ____.",
+"a": "salt",
+"alt": [
+"salts"
+],
+"lies": [
+"gold",
+"bread",
+"sweat"
+]
+}
+]

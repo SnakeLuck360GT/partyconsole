@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#08080a" />
+  <title>PartyConsole</title>
+  <style>html, body { margin: 0; height: 100%; background: #08080a; }</style>
+  <script>
+    // No landing page: phones become controllers, everything else (tablets, laptops, TVs) becomes the screen.
+    (function () {
+      var shortSide = Math.min(screen.width, screen.height);
+      var touch = matchMedia('(pointer: coarse)').matches;
+      var phone = touch && shortSide < 600;
+      location.replace((phone ? 'controller.html' : 'screen.html') + location.search + location.hash);
+    })();
+  </script>
+</head>
+<body></body>
+</html>

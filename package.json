@@ -1,0 +1,25 @@
+{
+  "name": "partyconsole",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "smoke": "node scripts/smoke.mjs",
+    "dev:https": "HTTPS=1 vite --host"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.21.0",
+    "cannon-es": "^0.20.0",
+    "peerjs": "^1.5.5",
+    "qrcode": "^1.5.4",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "playwright": "^1.63.0",
+    "vite": "^8.3.1"
+  }
+}

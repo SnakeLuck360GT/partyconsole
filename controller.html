@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ebebeb" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PartyConsole" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <title>PartyConsole — Controller</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <section id="view-join" class="view">
+    <div class="join-card">
+      <div class="brand"><span class="brand-dot"></span>party<b>console</b></div>
+      <h1 class="join-title">Join the room</h1>
+      <form id="join-form" autocomplete="off">
+        <label><span class="mono">Room code</span>
+          <input id="code-input" inputmode="text" maxlength="6" placeholder="ABCD" autocapitalize="characters" autocorrect="off" spellcheck="false" />
+        </label>
+        <label><span class="mono">Your name</span>
+          <input id="name-input" maxlength="16" placeholder="Nickname" autocorrect="off" spellcheck="false" />
+        </label>
+        <button id="join-btn" class="big-btn" type="submit">Join</button>
+        <div id="join-error" class="error"></div>
+      </form>
+    </div>
+  </section>
+
+  <header id="me-bar">
+    <span id="me-avatar" class="me-avatar"></span>
+    <span id="me-name" class="me-name"></span>
+    <button id="vibe-btn" class="icon-pill" aria-label="Vibration"><svg viewBox="0 0 24 24"><rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4 9v6M20 9v6"/></svg><span>Haptics</span></button>
+    <button id="menu-btn" class="icon-pill" hidden><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span>Menu</span></button>
+  </header>
+
+  <section id="view-lobby" class="view" hidden>
+    <div class="lobby-wrap">
+      <div id="lobby-status" class="lobby-status"></div>
+      <div id="lobby-games" class="lobby-games"></div>
+    </div>
+  </section>
+
+  <section id="view-play" class="view" hidden>
+    <div id="play-area"></div>
+  </section>
+
+  <section id="view-reconnect" class="view" hidden>
+    <div class="pk-message"><div class="spinner"></div><div id="reconnect-msg">Reconnecting…</div><div class="mono">keep this page open</div></div>
+  </section>
+
+  <div id="results" hidden></div>
+  <div id="rotate-hint"><div class="rot-phone"></div><div class="rot-text">Rotate your phone</div></div>
+  <script type="module" src="/src/controller/main.js"></script>
+</body>
+</html>

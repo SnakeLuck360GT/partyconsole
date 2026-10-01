@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PartyConsole — Screen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Figtree:wght@500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="lobby">
+    <header class="home-top">
+      <div id="players" class="players"></div>
+      <div id="empty-hint" class="empty-hint">Waiting for players</div>
+      <span id="player-count" hidden></span>
+      <div class="join">
+        <div class="join-text">
+          <div class="join-label">Join on your phone</div>
+          <div id="room-code" class="room-code">····</div>
+          <div id="join-url" class="join-url"></div>
+          <div id="connecting" class="connecting">Opening room…</div>
+        </div>
+        <div class="qr" id="qr"></div>
+      </div>
+    </header>
+
+    <main class="home-main">
+      <div class="focus-title" id="hero">
+        <span id="hero-title"></span>
+        <span id="hero-meta" class="focus-meta"></span>
+      </div>
+      <nav class="shelf" aria-label="Games"><div id="games" class="shelf-track"></div></nav>
+      <div class="home-actions">
+        <button id="hero-play" class="btn-start">Start</button>
+        <button id="mute" class="round-btn" title="Sound" aria-label="Toggle sound"></button>
+        <button id="fullscreen" class="round-btn" title="Fullscreen" aria-label="Fullscreen">
+          <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+      </div>
+    </main>
+    <p id="hero-tag" hidden></p>
+  </div>
+  <div id="game">
+    <div class="game-hud">
+      <span class="mini-code">Join: <b id="mini-code"></b></span>
+      <button id="exit-game" class="icon-btn small" title="Back to games (Esc)">✕</button>
+    </div>
+    <div id="game-loading" class="game-loading" hidden></div>
+  </div>
+  <div id="results" hidden></div>
+  <div id="toast" hidden></div>
+  <script type="module" src="/src/screen/main.js"></script>
+</body>
+</html>
