@@ -611,6 +611,7 @@ export function buildStadium(scene, pitch) {
   let excite = 0.1;
   let exciteTarget = 0.1;
   let cheerTeam = -1;
+  let cheerT = 0;
   let goalBoardsT = 0;
   return {
     root,
@@ -626,6 +627,7 @@ export function buildStadium(scene, pitch) {
       if (cheerTeam === 1) u.set(0.05, Math.max(excite, 0.9), 0.4);
       boardTex.offset.x = (boardTex.offset.x + dt * 0.035) % 1;
       goalTex.offset.x = (goalTex.offset.x + dt * 0.25) % 1;
+      if (cheerT > 0) { cheerT -= dt; if (cheerT <= 0) cheerTeam = -1; }
       if (goalBoardsT > 0) {
         goalBoardsT -= dt;
         if (goalBoardsT <= 0) { boardMat.map = boardTex; boardMat.emissiveMap = boardTex; boardMat.needsUpdate = true; }
@@ -638,7 +640,7 @@ export function buildStadium(scene, pitch) {
       cheerTeam = team;
       goalBoardsT = secs;
       boardMat.map = goalTex; boardMat.emissiveMap = goalTex; boardMat.needsUpdate = true;
-      setTimeout(() => { cheerTeam = -1; }, secs * 1000);
+      cheerT = secs;
     },
     netHit(side, z, y, speed) { goals[side]?.userData.hit(z, y, speed); },
     dispose() {

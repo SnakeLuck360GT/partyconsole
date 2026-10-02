@@ -21,7 +21,9 @@ import { clamp, angleDiff, ordinal, fmtTime } from './util.js';
 const MAX_HUMANS = 8; // driver seats (the rest spectate)
 const SPLIT_MAX = 4; // up to 4 humans: split screen; 5-8: one shared broadcast camera
 const GRID = 8;
-const LOBBY_TIME = 20;
+const LOBBY_TIME = 50; // select screen; ends early once everyone is READY
+const FLYOVER = 6.5; // track flyover seconds
+const WHOIS = 3.6; // 'who's who' seconds before the 3-2-1
 const POINTS = [15, 12, 10, 8, 6, 4, 2, 1];
 const CPU_COLORS = ['#9b6bff', '#ff6fb5', '#1fc9b0', '#ff8a1f', '#e8e2d0', '#5c6cff', '#9be15d', '#8a98b8'];
 const CPU_HEX = CPU_COLORS.map((c) => parseInt(c.slice(1), 16));
@@ -227,7 +229,7 @@ export default async function start(ctx) {
         renderLobby();
         broadcastState();
         const ids = racerIds();
-        if (ids.length && ids.every((id) => pickOf(id).ready)) { lobby.t = Math.min(lobby.t, 1.6); }
+        if (ids.length && ids.every((id) => pickOf(id).ready)) { lobby.t = Math.min(lobby.t, 2.5); }
       } else if (pid === ctx.adminId && m.type === 'pick') {
         if (Number.isInteger(m.track) && TRACKS[m.track]) cup.trackIdx = m.track;
         if (CLASSES[m.cc]) cup.cc = m.cc;
@@ -523,12 +525,13 @@ export default async function start(ctx) {
     hud.hideViews();
     hud.title(track.def.name, `${LAPS} LAP${LAPS > 1 ? 'S' : ''} · ${CLASSES[cup.cc].label} · ${karts.length} RACERS`, `RACE ${cup.race + 1}`);
     sfx.play('whoosh');
-    await wait(debug.includes('nofly') ? 200 : 5200);
+    await wait(debug.includes('nofly') ? 200 : FLYOVER * 1000);
     if (destroyed) return;
     hud.clearTitle();
     // split screen behind each player's kart
     phase = 'countdown';
-    cdT = -0.8;
+    cdT = debug.includes('nofly') ? -0.8 : -WHOIS; // cdT < 0: "who's who" (banners + markers), then 3-2-1
+    whoIsWho();
     for (const h of humans.values()) h.cam.snap(h.kart);
     applyLayout();
     let ei = 0;
@@ -540,6 +543,24 @@ export default async function start(ctx) {
     broadcastState();
   }
 
+  const CORNERS = { 1: ['the big screen'], 2: ['the top half', 'the bottom half'], 3: ['top-left', 'top-right', 'bottom-left'], 4: ['top-left', 'top-right', 'bottom-left', 'bottom-right'] };
+  /** Who's who: every player sees which viewport / kart is theirs (TV banner + arrow, phone message). */
+  function whoIsWho() {
+    const ms = debug.includes('nofly') ? 600 : WHOIS * 1000 - 200;
+    markersOn = true;
+    later(ms, () => { markersOn = false; hud.whoStrip(null); });
+    viewOrder.forEach((pid, i) => {
+      const h = humans.get(pid);
+      if (!h) return;
+      const p = ctx.player(pid);
+      const r = h.kart.racer;
+      if (!shared) hud.views[h.view].whois(`P${i + 1}`, r.name, r.color, p?.avatar || '', ms);
+      const where = shared ? null : CORNERS[viewOrder.length]?.[i];
+      ctx.send(pid, { type: 'whois', n: i + 1, where, color: r.color, ms });
+    });
+    if (shared) hud.whoStrip(viewOrder.map((pid, i) => { const r = humans.get(pid)?.kart.racer; return r && { n: i + 1, name: r.name, color: r.color, avatar: ctx.player(pid)?.avatar || '' }; }).filter(Boolean));
+  }
+  let markersOn = false;
   let countStep = -1;
   function countdownStep(dt) {
     cdT += dt;
@@ -865,7 +886,7 @@ export default async function start(ctx) {
     // end: all humans finished (or gone) -> wrap up, CPUs are placed by current order
     const humansLeft = [...humans.values()].filter((h) => !h.kart.finished && !h.kart.disconnected).length;
     const waitAll = debug.includes('waitall') && karts.some((k) => !k.finished); // test: let every CPU finish
-    if (endAt < 0 && humans.size && humansLeft === 0 && !waitAll) endAt = raceTime + 4.5;
+    if (endAt < 0 && humans.size && humansLeft === 0 && !waitAll) endAt = raceTime + 6;
     if (endAt < 0 && !humans.size) endAt = raceTime + 2;
     if ((endAt >= 0 && raceTime >= endAt) || raceTime > 60 * 8) endRace();
   }
@@ -955,7 +976,7 @@ export default async function start(ctx) {
     updateRanking();
     ranking.forEach((k, i) => { if (!k.finished) { k.place = i + 1; k.autopilot = true; } });
     broadcastState();
-    await wait(1500);
+    await wait(2500);
     if (destroyed) return;
     // cup points
     ranking.forEach((k, i) => cup.points.set(k.racer.id, (cup.points.get(k.racer.id) || 0) + POINTS[i]));
@@ -967,7 +988,7 @@ export default async function start(ctx) {
     const panel = hud.panel(placementsHtml(rows, { title: 'RACE <em>RESULTS</em>', sub: `${track.def.name} · ${CLASSES[cup.cc].label} · race ${cup.race + 1}` }));
     panel.style.background = 'linear-gradient(160deg,rgba(27,31,74,.86),rgba(11,13,34,.92))';
     sfx.play('win');
-    await wait(debug.includes('fastresults') ? 1200 : 6500);
+    await wait(debug.includes('fastresults') ? 1200 : 8000);
     if (destroyed) return;
     panel.remove();
     const humanRows = ranking.filter((k) => k.human).map((k) => ({
@@ -987,7 +1008,7 @@ export default async function start(ctx) {
   const _a = new THREE.Vector3();
   function updateIntroCam(dt) {
     introT += dt;
-    const u = Math.min(1, introT / 5.2);
+    const u = Math.min(1, introT / FLYOVER);
     const e = u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2;
     const L = track.L;
     const s = track.wrapS(-L * 0.42 + e * (L * 0.42 - 38));
@@ -1008,6 +1029,8 @@ export default async function start(ctx) {
   let elapsed = 0;
   let raf = 0;
   const perf = { frames: 0, acc: 0, fps: 0, ms: 0, msAcc: 0 };
+  let perfLast = performance.now();
+  const perViewShadow = params.get('kartPV') !== '0';
   const fastSteps = Math.min(8, Number(params.get('kartFast')) || 0);
   function simulate(dt) {
     if (phase === 'race') raceStep(dt);
@@ -1075,7 +1098,7 @@ export default async function start(ctx) {
         setPointScale(H, introCam);
         // shadow box around the point the flyover camera is looking at (wide: the flyover sees a lot)
         stage.fitShadowView(introCam.position.x, _a.y, introCam.position.z, Math.atan2(_a.x - introCam.position.x, _a.z - introCam.position.z), 80);
-        for (const k of karts) if (k.label) k.label.visible = false;
+        for (const k of karts) { if (k.label) k.label.visible = false; if (k.marker) k.marker.visible = false; }
         stage.render([{ rect: { x: 0, y: 0, w: W, h: H }, camera: introCam }]);
       }
     } else {
@@ -1092,11 +1115,12 @@ export default async function start(ctx) {
         if (!h?.rect) continue;
         list.push(h.viewSpec || (h.viewSpec = makeViewSpec(h)));
       }
+      if (!shared && !perViewShadow) { humanKarts.length = 0; for (const h of humans.values()) humanKarts.push(h.kart); stage.fitShadow(humanKarts, 34); }
       stage.render(list);
       updateHud(t);
     }
     // perf log
-    perf.frames++; perf.acc += dt; perf.msAcc += performance.now() - t0;
+    perf.frames++; perf.acc += (now - perfLast) / 1000; perfLast = now; perf.msAcc += performance.now() - t0;
     if (perf.acc >= 1) { perf.fps = perf.frames / perf.acc; perf.ms = perf.msAcc / perf.frames; perf.frames = 0; perf.acc = 0; perf.msAcc = 0; }
   }
   const viewList = [];
@@ -1109,7 +1133,7 @@ export default async function start(ctx) {
       const cam = sharedCam.camera;
       world.sky.follow(cam);
       setPointScale(sharedRect.h, cam);
-      for (const k of karts) if (k.label) { k.label.visible = true; k.fitLabel(cam, sharedRect.h, 40); }
+      for (const k of karts) if (k.label) { k.label.visible = true; k.fitLabel(cam, sharedRect.h, 40); if (k.marker) { k.marker.visible = markersOn; k.fitMarker(cam, sharedRect.h, elapsed); } }
     },
   };
   function shadowHalf() { const n = viewOrder.length; return n <= 1 ? 50 : n === 2 ? 46 : 40; }
@@ -1118,7 +1142,7 @@ export default async function start(ctx) {
     return {
       get rect() { return h.rect; },
       camera: h.cam.camera,
-      shadow: () => { const k = h.kart; stage.fitShadowView(k.x, k.y, k.z, h.cam.yaw, shadowHalf()); },
+      shadow: perViewShadow ? () => { const k = h.kart; stage.fitShadowView(k.x, k.y, k.z, h.cam.yaw, shadowHalf()); } : null,
       before: () => {
         world.sky.follow(h.cam.camera);
         setPointScale(h.rect.h, h.cam.camera);
@@ -1126,6 +1150,7 @@ export default async function start(ctx) {
           if (!k.label) continue;
           k.label.visible = k !== h.kart;
           if (k.label.visible) k.fitLabel(h.cam.camera, h.rect.h);
+          if (k.marker) { k.marker.visible = markersOn && k === h.kart; k.fitMarker(h.cam.camera, h.rect.h, elapsed); }
         }
       },
     };
@@ -1167,6 +1192,7 @@ export default async function start(ctx) {
     get fps() { return perf.fps; },
     get frameMs() { return perf.ms; },
     get raceTime() { return raceTime; },
+    get cd() { return cdT; },
     trackL: () => track?.L,
     karts: () => karts.map((k) => ({ finishTime: k.finishTime, offroad: k.offroad, wrongWay: k.wrongWay, spinT: k.spinT, id: k.id, name: k.racer.name, human: k.human, x: k.x, z: k.z, y: k.y, heading: k.heading, dist: k.dist, lat: k.lat, laps: k.lapsDone, finished: k.finished, place: k.place, item: k.item, held: k.held, speed: k.speed, coins: k.coins, drift: k.drift, boostT: k.boostT, visible: k.root.visible, autopilot: k.autopilot })),
     ranking: () => ranking.map((k) => k.racer.name),

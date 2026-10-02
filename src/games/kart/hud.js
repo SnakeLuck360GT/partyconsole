@@ -83,6 +83,16 @@ const CSS = `
 .kx.shared .kx-map3 .st{font-size:calc(var(--u)*4.3);gap:calc(var(--u)*.6);top:6%}
 .kx.shared .kx-map3 h3{display:none}
 .kx.shared .kx-count span{font-size:calc(var(--u)*24)}
+.kx-who{position:absolute;left:50%;bottom:18%;transform:translateX(-50%);display:flex;align-items:center;gap:calc(var(--u)*1.6);padding:calc(var(--u)*1.2) calc(var(--u)*4) calc(var(--u)*1.2) calc(var(--u)*1.4);
+  border-radius:999px;background:var(--c);box-shadow:0 calc(var(--u)*.8) 0 rgba(0,0,0,.3);white-space:nowrap;animation:kxwho .45s cubic-bezier(.2,1.5,.4,1)}
+.kx-who b{font-family:Unbounded,Fredoka,sans-serif;font-weight:800;font-style:italic;font-size:calc(var(--u)*6);background:#fff;color:var(--c);border-radius:999px;padding:0 .45em;line-height:1.25}
+.kx-who span{font-weight:700;font-size:calc(var(--u)*8);text-shadow:0 calc(var(--u)*.4) 0 rgba(0,0,0,.3)}
+.kx-who i{font-style:normal;font-size:calc(var(--u)*6)}
+.kx-who.out{transition:opacity .3s;opacity:0}
+.kx-strip{position:absolute;left:50%;top:13%;transform:translateX(-50%);display:flex;gap:1vw;animation:kxslide .5s}
+.kx-strip div{display:flex;align-items:center;gap:.5em;padding:.35em 1em .35em .4em;border-radius:999px;background:var(--c);font-weight:700;font-size:min(2vw,3.6vh);box-shadow:0 .5vh 0 rgba(0,0,0,.3)}
+.kx-strip b{background:#fff;color:var(--c);border-radius:999px;padding:0 .45em;font-family:Unbounded,Fredoka,sans-serif;font-style:italic}
+@keyframes kxwho{from{transform:translateX(-50%) scale(.4);opacity:0}}
 .kx-div{position:absolute;background:#0b0d1a;z-index:2}
 .kx-map3{position:absolute;overflow:hidden;background:radial-gradient(circle at 30% 20%,#2a2f6a,#0d0f24 70%);display:none}
 .kx-map3.on{display:block}
@@ -282,6 +292,15 @@ class ViewHud {
     el('span', cls, this.count, text);
   }
 
+  /** Pre-race "this view is yours" banner. */
+  whois(tag, name, color, avatar, ms = 3200) {
+    this.el.querySelectorAll('.kx-who').forEach((b) => b.remove());
+    const b = el('div', 'kx-who', this.el, `<b>${escapeHtml(tag)}</b>${avatar ? `<i>${escapeHtml(avatar)}</i>` : ''}<span>${escapeHtml(name)}</span>`);
+    b.style.setProperty('--c', color);
+    setTimeout(() => b.classList.add('out'), ms);
+    setTimeout(() => b.remove(), ms + 400);
+  }
+
   rocket(text) { const r = el('span', 'rocket', this.count, text); setTimeout(() => r.remove(), 1300); }
 
   finish(place, sub) {
@@ -379,6 +398,12 @@ export function createHud(container) {
         map3.dataset.key = key;
         map3.querySelector('.st').innerHTML = ranking.map((k, i) => `<div class="${k.human ? 'h' : ''}" style="--c:${k.racer.color}"><b>${i + 1}</b><span>${escapeHtml(k.racer.name)}</span>${k.finished ? '<i>FIN</i>' : ''}</div>`).join('');
       }
+    },
+    /** Shared view: strip of all human racers in their colours (null hides it). */
+    whoStrip(list) {
+      root.querySelector('.kx-strip')?.remove();
+      if (!list) return;
+      el('div', 'kx-strip', root, list.map((p) => `<div style="--c:${p.color}"><b>P${p.n}</b>${p.avatar ? `${escapeHtml(p.avatar)} ` : ''}${escapeHtml(p.name)}</div>`).join(''));
     },
     title(name, sub, ribbon) {
       titleEl?.remove();

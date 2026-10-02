@@ -32,6 +32,11 @@ const CSS = `
 .pb-items img{height:100%;width:auto}
 .pb-rank{position:absolute;top:-11px;left:-8px;background:var(--ink);color:#fff;border-radius:999px;font-weight:800;font-size:clamp(11px,.95vw,16px);padding:1px 8px;box-shadow:0 3px 6px rgba(0,0,0,.25)}
 .pb-rank.r1{background:#ffc61a;color:#3d2600}
+.pb-cards.compact{gap:6px;padding:0 8px}
+.pb-cards.compact .pb-card{padding:5px 6px 5px 4px;gap:5px}
+.pb-cards.compact .pb-av{width:clamp(30px,2.8vw,50px);height:clamp(30px,2.8vw,50px)}
+.pb-cards.compact .pb-stats{gap:5px;font-size:clamp(13px,1.2vw,22px)}
+.pb-cards.compact .pb-name{font-size:clamp(11px,1vw,18px)}
 .pb-caption{position:absolute;left:50%;bottom:clamp(110px,15vh,170px);transform:translateX(-50%) translateY(20px);background:rgba(24,26,36,.9);border-radius:18px;padding:12px 28px;font-size:clamp(18px,2vw,36px);font-weight:700;opacity:0;transition:all .3s;text-align:center;max-width:80vw}
 .pb-caption.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .pb-banner{position:absolute;inset:0;display:grid;place-items:center;z-index:20}
@@ -88,7 +93,7 @@ const CSS = `
 .pb-vs .big img{position:absolute;inset:-14% -8% 0;width:116%;height:114%;object-fit:contain}
 .pb-vs .vs{font-size:clamp(40px,5vw,92px);font-weight:800;color:#ff3d5a}
 .pb-vs .side.win .big{box-shadow:0 0 0 8px #ffc61a;transform:scale(1.1)}
-.pb-big{font-size:clamp(60px,8vw,140px);line-height:1;font-weight:800}
+.pb-big,.pb-sheet .pb-big{font-size:clamp(60px,8vw,140px);line-height:1;font-weight:800;margin:6px 0}
 .pb-big img{height:1em}
 .pb-order{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:16px}
 .pb-order .o{display:flex;flex-direction:column;align-items:center;gap:6px;background:#f3f4f8;border-radius:20px;padding:10px 14px;min-width:110px;font-weight:800;font-size:clamp(14px,1.25vw,22px);box-shadow:inset 0 -5px 0 var(--c)}
@@ -146,6 +151,7 @@ export function createHud(container) {
         }
       }
       const compact = pieces.length > 6;
+      cardsEl.classList.toggle('compact', compact);
       for (const p of pieces) {
         const el = cardEls.get(p.idx);
         el.style.setProperty('--c', p.color);

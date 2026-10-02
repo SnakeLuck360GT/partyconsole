@@ -1,6 +1,6 @@
-// Family-friendly word filter. Offensive words are REJECTED as plays ("Keep it clean") and, while someone is still
-// typing one, the TV masks it so it never sits in big letters on the shared screen.
-// Lists are ROT13-encoded so the source stays readable without a wall of profanity.
+// Family-friendly display filter. Offensive words are VALID plays (they're real words), but the shared TV never
+// shows them in full: the offensive part is masked, keeping its first letter ("F***ERS"). The player's own phone
+// shows what they typed. Lists are ROT13-encoded so the source stays readable without a wall of profanity.
 
 const rot13 = (s) => s.replace(/[a-z]/g, (c) => String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97));
 const decode = (s) => rot13(s).split(' ').filter(Boolean);
@@ -17,17 +17,30 @@ const EXACT = new Set(decode('nff nffrf nefr nefrf onfgneq onfgneqf obyybpxf oba
 // Letter sequences never used as a prompt (they'd sit huge in the middle of the TV).
 export const BAD_PROMPTS = new Set(decode('nff frk snt phz gvg avt shp shx pbx qvx wvm xxx pag ubr jgs fug cbb crr tnl spx'));
 
-/** true if `word` (lowercase a-z) is not allowed as a play / shouldn't be displayed on the shared screen. */
-export function isOffensive(word) {
+/** Spans [start, end) of `word` that are offensive, or [] if the word is fine. */
+function offensiveSpans(word) {
   const w = String(word || '').toLowerCase();
-  if (!w) return false;
-  if (EXACT.has(w)) return true;
-  if (ALLOW_ROOTS.some((a) => w.includes(a))) return false;
-  for (const s of SUBSTRINGS) if (w.includes(s)) return true;
-  return false;
+  if (!w) return [];
+  if (EXACT.has(w)) return [[0, w.length]];
+  if (ALLOW_ROOTS.some((a) => w.includes(a))) return [];
+  const spans = [];
+  for (const s of SUBSTRINGS) {
+    for (let i = w.indexOf(s); i >= 0; i = w.indexOf(s, i + 1)) spans.push([i, i + s.length]);
+  }
+  return spans;
 }
 
-/** What to show on the TV for a word: the word itself, or a same-length mask. */
+/** true if `word` (lowercase a-z) shouldn't be shown in full on the shared screen. */
+export function isOffensive(word) {
+  return offensiveSpans(word).length > 0;
+}
+
+/** What the TV shows for a word: offensive parts masked except their first letter, the rest left readable. */
 export function displayWord(word) {
-  return isOffensive(word) ? '•'.repeat(Math.max(3, Math.min(String(word).length, 12))) : word;
+  const w = String(word || '');
+  const spans = offensiveSpans(w);
+  if (!spans.length) return w;
+  const out = w.split('');
+  for (const [a, b] of spans) for (let i = a + 1; i < b; i++) out[i] = '*';
+  return out.join('');
 }

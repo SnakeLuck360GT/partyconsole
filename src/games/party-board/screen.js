@@ -90,6 +90,8 @@ export default async function start(ctx) {
     if (G) for (const p of G.pieces) p.obj?.update(dt);
     for (const fn of extras) fn(dt, t);
     cam.update(dt * rt.speed);
+    const fp = G && G.cur != null ? G.pieces[G.cur]?.obj?.root.position : null;
+    world.setFocus(camera.position, fp);
   });
 
   // ------------------------------------------------------------------ helpers
@@ -236,7 +238,7 @@ export default async function start(ctx) {
     const c = world.spacePos(spaceId);
     if (n <= 1) return c;
     const a = (k / n) * Math.PI * 2 + Math.PI / 4;
-    const r = n > 4 ? 0.95 : 0.75;
+    const r = n > 6 ? 1.25 : n > 4 ? 0.95 : 0.75;
     return c.add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
   }
   /** Spread idle pieces that share a space. */
@@ -424,8 +426,15 @@ export default async function start(ctx) {
 
   // ------------------------------------------------------------------ turns
   async function playTurn(p) {
-    G.cur = p.idx;
     const pid = controllerOf(p);
+    if (!pid && p.members.length) {
+      // Everyone on this piece is disconnected: skip the turn (they can come back any time).
+      log('turn:skip');
+      hud.caption(`<b>${escapeHtml(pieceName(p))}</b> is away. Turn skipped.`, 1600 / rt.speed);
+      await W(1200);
+      return;
+    }
+    G.cur = p.idx;
     p.turnCount++;
     refreshHud();
     cam.set(p.obj.root, { dist: 13, pitch: 0.82, yaw: 0, stiff: 2.2 });
@@ -1281,7 +1290,7 @@ export default async function start(ctx) {
     for (const p of ranked) {
       for (const pid of p.members) {
         const pl = ctx.player(pid);
-        if (pl) rows.push({ player: pl, score: `${p.stars} ${p.stars === 1 ? 'star' : 'stars'} · ${p.coins} coins`, label: p.members.length > 1 ? pieceName(p) : '' });
+        if (pl) rows.push({ player: pl, score: `${p.stars} ${p.stars === 1 ? 'star' : 'stars'} · ${p.coins} coins`, label: p.members.length > 1 ? `(${pieceName(p)})` : '' });
       }
     }
     log('results');

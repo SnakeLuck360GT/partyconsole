@@ -243,7 +243,8 @@ export class FX {
     this.t += dt;
     const b = this.bomb;
     b.pulse = Math.max(0, b.pulse - dt * 5);
-    b.spawnT = Math.min(1, b.spawnT + dt * 2.2);
+    // wall-clock based so a slow frame rate can't leave the bomb hanging mid-drop over the seats
+    b.spawnT = b.spawnStart ? Math.min(1, (performance.now() - b.spawnStart) / 450) : 1;
     // pointer: critically-damped spring toward target angle (shortest way round)
     let d = b.targetAngle - b.angle;
     d = ((d + Math.PI) % TAU + TAU) % TAU - Math.PI;

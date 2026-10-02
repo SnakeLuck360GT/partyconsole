@@ -1,13 +1,15 @@
 // Word Bomb — screen (TV). Authoritative game state, dictionary validation, 2D canvas + DOM presentation.
 import { countdown, escapeHtml } from '../../sdk/screen-kit.js';
 import { sfx } from '../../sdk/audio.js';
-import { FX, drawBackdrop, superellipsePoints } from './render.js';
+import { FX, drawBackdrop } from './render.js';
+import { computeLayout } from './layout.js';
 import { createAudio } from './audio.js';
 import { SCREEN_CSS } from './screen-style.js';
 import { isOffensive, displayWord } from './blocklist.js';
 import { BONUS_LETTERS, BONUS_EXCLUDE, MAX_HEARTS, startHearts, HEART_SVG, highlight, initials, onColorRgb } from './common.js';
 
-const MIN_TURN_MS = 2500; // a player always gets at least this long after receiving the bomb
+const MIN_TURN_MS = 8000; // a player always gets at least this long after receiving the bomb (early game)
+const MIN_TURN_LATE_MS = 5500; // ...easing down to this as the game heats up
 const LONELY_MS = 15000; // multiplayer game with only one connected survivor ends after this
 const PAUSE_MS = 30000; // nobody connected to play: give up after this
 const FORFEIT_MS = 30000; // a player gone this long mid-game is out (so they can't 'survive' while away)
@@ -74,6 +76,7 @@ export default async function start(ctx) {
   let used = new Set();
   let recentPrompts = [];
   let typing = '';
+  let pillErr = ''; // last rejection reason, shown inside the typing box until the text changes
   let fuseStart = 0;
   let fuseEnd = 0;
   let fuseVisMax = 1;
@@ -158,26 +161,6 @@ export default async function start(ctx) {
   }
 
   // ------------------------------------------------------------ layout
-  function computeLayout(W, H, n) {
-    const cx = W / 2;
-    const cy = H * 0.53;
-    let specs;
-    if (n <= 18) specs = [{ a: W * 0.39, b: H * 0.345, n: 2, count: n, phase: n === 1 ? 0.75 : n === 2 ? 0.25 : 0 }];
-    else if (n <= 30) specs = [{ a: W * 0.43, b: H * 0.37, n: 2.8, count: n, phase: 0 }];
-    else {
-      const outer = Math.ceil(n * 0.58);
-      specs = [{ a: W * 0.44, b: H * 0.39, n: 2.8, count: outer, phase: 0 }, { a: W * 0.28, b: H * 0.225, n: 2.2, count: n - outer, phase: 0.5 }];
-    }
-    const rings = specs.map((s) => ({ ...s, ...superellipsePoints(cx, cy, s.a, s.b, s.n, Math.max(1, s.count), s.phase) }));
-    let A = Math.min(H * 0.13, W * 0.075);
-    for (const r of rings) if (r.count > 1) A = Math.min(A, (r.perimeter / r.count) * 0.52);
-    A = Math.max(22, A);
-    const R = Math.min(W * 0.07, n > 30 ? H * 0.072 : n > 18 ? H * 0.095 : H * 0.115);
-    const seats = [];
-    for (const r of rings) for (let i = 0; i < r.count; i++) seats.push({ x: r.points[i][0], y: r.points[i][1] });
-    return { W, H, cx, cy, rings, A, seats, bomb: { x: cx, y: cy - H * 0.045, R } };
-  }
-
   function relayout() {
     const W = root.clientWidth || 1280;
     const H = root.clientHeight || 720;
@@ -201,14 +184,14 @@ export default async function start(ctx) {
     });
     promptEl.style.left = `${bomb.x}px`;
     promptEl.style.top = `${bomb.y + bomb.R * 0.06}px`;
-    promptEl.style.fontSize = `${bomb.R * 0.74}px`;
+    fitPrompt();
     const pillTop = bomb.y + bomb.R * 1.28;
     pillEl.style.left = `${bomb.x}px`;
     pillEl.style.top = `${pillTop}px`;
     pillEl.style.fontSize = `${Math.max(16, bomb.R * 0.4)}px`;
     hintEl.style.left = `${bomb.x}px`;
-    hintEl.style.top = `${pillTop + Math.max(16, bomb.R * 0.4) * 1.9}px`;
-    hintEl.style.fontSize = `${Math.max(13, bomb.R * 0.24)}px`;
+    hintEl.style.top = `${pillTop + Math.max(16, bomb.R * 0.4) * 0.3}px`; // only shown while the typing box is hidden
+    hintEl.style.fontSize = `${Math.max(14, bomb.R * 0.26)}px`;
     pointAt(holder, true);
   }
 
@@ -274,16 +257,23 @@ export default async function start(ctx) {
 
   function renderHud() {
     const alive = aliveList().length;
-    subEl.innerHTML = practice ? 'Practice mode · <b>survive!</b>' : `<b>${alive}</b> of ${order.length} still standing`;
+    subEl.innerHTML = practice ? (() => { const n = roster.get(order[0])?.words.length || 0; return `Practice · <b>${n}</b> word${n === 1 ? '' : 's'}`; })() : `<b>${alive}</b> of ${order.length} still standing`;
     const lvl = level();
     statusEl.innerHTML = phase === 'intro' ? '' : `Round <b>${round() + 1}</b><br>${LEVELS[lvl]}<span class="lvl">${LEVELS.map((_, i) => `<i class="${i <= lvl ? 'on' : ''}"></i>`).join('')}</span>`;
     const specs = [...spectators.values()].filter((p) => p.connected !== false);
     specsEl.innerHTML = specs.length ? `Joining next game: <b>${specs.map((p) => escapeHtml(p.name)).join(', ')}</b>` : '';
   }
 
+  // Prompt letters always face the camera, centred on the bomb, sized so 2-4 letters fit inside the sphere.
+  function fitPrompt() {
+    if (!layout) return;
+    const n = Math.max(2, prompt.length || 3);
+    promptEl.style.fontSize = `${layout.bomb.R * Math.min(0.78, 1.5 / (n * 0.64))}px`;
+  }
   function setPrompt(p) {
     promptEl.classList.remove('gone');
-    promptEl.innerHTML = p.toUpperCase().split('').map((c, i) => `<span style="animation-delay:${i * 70}ms">${c}</span>`).join('');
+    promptEl.innerHTML = `<span>${p.toUpperCase()}</span>`;
+    fitPrompt();
   }
 
   function renderTyping() {
@@ -292,9 +282,9 @@ export default async function start(ctx) {
     pillEl.classList.remove('hidden');
     pillEl.style.setProperty('--c', r.player.color);
     pillEl.style.setProperty('--on', onColor(r.player.color));
-    const shown = typing ? (isOffensive(typing) ? '•'.repeat(typing.length) : typing) : '';
+    const shown = typing ? displayWord(typing) : '';
     const txt = shown
-      ? `${highlight(shown, prompt)}<span class="caret"></span>`
+      ? `${highlight(shown, prompt)}<span class="caret"></span>${pillErr ? `<span class="err">${escapeHtml(pillErr)}</span>` : ''}`
       : `<span class="ph">${escapeHtml(r.player.name)} is thinking…</span>`;
     pillEl.innerHTML = `<span class="av">${escapeHtml(initials(r.player.name))}</span><span class="txt">${txt}</span>`;
   }
@@ -322,7 +312,7 @@ export default async function start(ctx) {
   }
 
   function addFeed(r, word, p) {
-    const row = el('div', 'row', null, `<i></i><b>${highlight(displayWord(word), isOffensive(word) ? '' : p)}</b>`);
+    const row = el('div', 'row', null, `<i></i><b>${highlight(displayWord(word), p)}</b>`);
     row.style.setProperty('--c', r.player.color);
     feedEl.insertBefore(row, feedEl.firstChild);
     while (feedEl.children.length > 5) feedEl.lastChild.remove();
@@ -417,15 +407,16 @@ export default async function start(ctx) {
 
   function armBomb() {
     const k = clamp(explosions / Math.max(3, totalHearts * 0.8), 0, 1);
-    const lo = 9 - 3 * k;
-    const hi = 16 - 5 * k;
+    // hidden fuse per bomb: 15-26 s at the start, easing to 11-19 s late in the game
+    const lo = 15 - 4 * k;
+    const hi = 26 - 7 * k;
     const now = performance.now();
     fuseStart = now;
     const f = FAST ? 0.45 : 1;
     fuseEnd = now + rand(lo, hi) * 1000 * f;
     fuseVisMax = hi * 1000 * f;
     nextTickAt = now + 450;
-    Object.assign(fx.bomb, { visible: true, spawnT: 0, fuse: 1, heat: 0 });
+    Object.assign(fx.bomb, { visible: true, spawnT: 0, spawnStart: performance.now(), fuse: 1, heat: 0 });
     audio.drop();
     audio.startHiss();
   }
@@ -435,6 +426,7 @@ export default async function start(ctx) {
     holder = pid;
     turnId++;
     typing = '';
+    pillErr = '';
     phase = 'play';
     clearBubbles();
     pillEl.classList.remove('bad');
@@ -445,7 +437,8 @@ export default async function start(ctx) {
       setPrompt(prompt);
     }
     const now = performance.now();
-    const minTurn = FAST ? 800 : MIN_TURN_MS;
+    const k = clamp(explosions / Math.max(3, totalHearts * 0.8), 0, 1);
+    const minTurn = FAST ? 800 : MIN_TURN_MS - (MIN_TURN_MS - MIN_TURN_LATE_MS) * k;
     if (fuseEnd - now < minTurn) fuseEnd = now + minTurn;
     const src = from ?? prev;
     const a = src && roster.get(src);
@@ -479,17 +472,18 @@ export default async function start(ctx) {
     if (!word.includes(prompt)) return `Must contain ${prompt.toUpperCase()}`;
     if (!dict.has(word)) return 'Not a word';
     if (used.has(word)) return 'Already used';
-    if (isOffensive(word)) return 'Keep it clean';
     return null;
   }
 
   function onSubmit(pid, msg) {
     if (phase !== 'play' || paused || pid !== holder || msg.turnId !== turnId) return;
     const now = performance.now();
-    if (now - (lastSubmit.get(pid) || 0) < 150) return;
-    lastSubmit.set(pid, now);
-    const r = roster.get(pid);
     const word = String(msg.text || '').toLowerCase().trim().slice(0, 40);
+    // swallow only an accidental double-send of the same word; a different word is always judged
+    const last = lastSubmit.get(pid);
+    if (last && last.word === word && now - last.t < 400) return;
+    lastSubmit.set(pid, { word, t: now });
+    const r = roster.get(pid);
     const reason = validate(word);
     if (reason) {
       ctx.send(pid, { type: 'reject', reason, turnId });
@@ -499,7 +493,10 @@ export default async function start(ctx) {
       pillEl.classList.add('bad');
       clearTimeout(onSubmit.badT);
       onSubmit.badT = setTimeout(() => pillEl.classList.remove('bad'), 500);
-      setHint(escapeHtml(reason), 'bad', 1400);
+      pillErr = reason;
+      renderTyping();
+      clearTimeout(onSubmit.errT);
+      onSubmit.errT = setTimeout(() => { pillErr = ''; renderTyping(); }, 1600);
       if (reason !== 'Type a word!') ctx.vibrate(pid, 'error');
       flashSeat(r, 'shake', 450);
       return;
@@ -538,6 +535,7 @@ export default async function start(ctx) {
     const t = String(msg.text || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 24);
     if (t === typing) return;
     typing = t;
+    pillErr = ''; // a stale "Not a word" must not sit under the next attempt
     const now = performance.now();
     if (now - lastKeySound > 45) { audio.key(); lastKeySound = now; }
     renderTyping();
@@ -578,7 +576,7 @@ export default async function start(ctx) {
     ctx.vibrate(r.id, eliminated ? 'lose' : 'explosion');
     renderHud();
     syncAll();
-    later(afterBoom, 2800);
+    later(afterBoom, FAST ? 2800 : 3600); // time to see who blew up before the next prompt
   }
 
   function isOver() {
@@ -602,7 +600,7 @@ export default async function start(ctx) {
     if (paused) return;
     paused = true;
     pauseSince = performance.now();
-    pauseRemaining = Math.max(MIN_TURN_MS, fuseEnd - pauseSince);
+    pauseRemaining = Math.max(MIN_TURN_LATE_MS, fuseEnd - pauseSince);
     pauseElapsed = pauseSince - fuseStart;
     audio.stopHiss();
     showWait('Waiting for players to reconnect…<small>The game ends in 30 seconds if nobody comes back</small>');
@@ -660,7 +658,7 @@ export default async function start(ctx) {
       audio.tick(heat);
       if (Math.random() < 0.5) audio.crackle();
       fx.bomb.pulse = 1;
-      nextTickAt = now + Math.max(160, 640 - elapsed * 0.045) * rand(0.92, 1.08);
+      nextTickAt = now + (640 - 480 * heat) * rand(0.92, 1.08); // ticks speed up as the fuse burns
     }
     if (now >= fuseEnd) explode();
   }
@@ -810,7 +808,8 @@ export default async function start(ctx) {
     if (fx.bomb.visible) {
       // letters ride on the bomb: follow its drop-in, bob, wobble and squash
       const tr = fx.bombTransform();
-      promptEl.style.transform = `translate(-50%,-50%) translate(${(tr.x - fx.bomb.x).toFixed(1)}px, ${(tr.y - fx.bomb.y).toFixed(1)}px) rotate(${tr.rot.toFixed(3)}rad) scale(${tr.sx.toFixed(3)}, ${tr.sy.toFixed(3)})`;
+      // follow the bomb's drop/bob/squash but never its wobble: the letters stay upright and readable
+      promptEl.style.transform = `translate(-50%,-50%) translate(${(tr.x - fx.bomb.x).toFixed(1)}px, ${(tr.y - fx.bomb.y).toFixed(1)}px) scale(${tr.sx.toFixed(3)}, ${tr.sy.toFixed(3)})`;
     }
     if (shake > 0) {
       shake = Math.max(0, shake - dt * 1.6);
@@ -850,6 +849,7 @@ export default async function start(ctx) {
       for (const id of timers) clearTimeout(id);
       clearTimeout(setHint.t);
       clearTimeout(onSubmit.badT);
+      clearTimeout(onSubmit.errT);
       cancelAnimationFrame(raf);
       clearInterval(guard);
       ro.disconnect();

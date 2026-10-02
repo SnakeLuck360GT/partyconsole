@@ -115,8 +115,13 @@ function applyOrientation(want) {
   updateLayout();
 }
 
+const isTextField = (el) => !!el && (el.isContentEditable || el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'range'].includes(el.type)));
+
 function updateLayout() {
   const b = document.body;
+  // The on-screen keyboard shrinks the viewport (often below its width), which would flip a portrait controller
+  // into the landscape layout mid-typing. Keep the current layout until the field loses focus.
+  if (isTouch && b.dataset.layout && isTextField(document.activeElement)) return;
   const w = window.innerWidth;
   const h = window.innerHeight;
   const portrait = h > w;
@@ -339,9 +344,17 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && currentGame) applyOrientation(getGame(currentGame.id)?.orientation);
   if (document.visibilityState === 'visible' && wantConnected && !conn) reconnectLoop();
 });
-// Block pinch-zoom / double-tap zoom / context menus while playing.
-document.addEventListener('gesturestart', (e) => e.preventDefault());
+// Block pinch-zoom / double-tap zoom / context menus. iOS Safari ignores user-scalable=no, so pinches are stopped
+// here (gesture* is iOS-only; multi-touch touchmove covers the rest). Double-tap zoom is off via touch-action.
+for (const type of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(type, (e) => e.preventDefault());
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 document.addEventListener('contextmenu', (e) => e.preventDefault());
+// After the keyboard closes, iOS can leave the page scrolled/offset; snap back and re-check the layout.
+document.addEventListener('focusout', () => setTimeout(() => {
+  if (isTextField(document.activeElement)) return;
+  if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+  updateLayout();
+}, 60));
 
 show('join');
 if (params.get('room') && storage('pc-name') && params.has('autojoin')) join(params.get('room'), storage('pc-name'));

@@ -14,7 +14,7 @@ export function startHearts(n) {
 
 export const HEART_SVG = '<svg viewBox="-1 -1 26 24"><path d="M12 21.5S3.3 15.8 1.2 11C-.5 7 2 2 6.6 2c2.5 0 4.1 1.4 5.4 3.3C13.3 3.4 14.9 2 17.4 2 22 2 24.5 7 22.8 11 20.7 15.8 12 21.5 12 21.5z"/></svg>';
 
-/** Uppercase `text` with the first occurrence of `prompt` wrapped in <span class="hl">. `text` must be [a-z•]* only. */
+/** Uppercase `text` with the first occurrence of `prompt` wrapped in <span class="hl">. `text` must be [a-z*]* only. */
 export function highlight(text, prompt) {
   const t = String(text || '').toLowerCase();
   const p = String(prompt || '').toLowerCase();

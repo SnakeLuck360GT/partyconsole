@@ -603,6 +603,40 @@ export async function buildWorld(stage, board, { sharedAsset, asset }) {
   const groups = await Promise.all(jobs);
   groups.forEach((g) => root.add(g));
 
+  // ---- see-through: trees/bushes between the camera and the focused piece shrink away (and grow back after)
+  const occluders = [];
+  const tallSets = [...treeSets.map((set) => ({ set, r: 2.0 })), ...split(bushes, 4).map((set) => ({ set, r: 1.0 }))];
+  tallSets.forEach(({ set, r }, gi) => {
+    const g = groups[gi];
+    const meshes = g.children.filter((m) => m.isInstancedMesh);
+    set.forEach((p, i) => occluders.push({ x: p.x, z: p.z, r, meshes, i, base: meshes.map((m) => { const mm = new THREE.Matrix4(); m.getMatrixAt(i, mm); return mm; }), k: 1, goal: 1 }));
+  });
+  const occM = new THREE.Matrix4();
+  const occA = new THREE.Matrix4();
+  const occB = new THREE.Matrix4();
+  let focus = null;
+  function setFocus(camPos, target) { focus = target ? { c: camPos, t: target } : null; }
+  frameFns.push((dt) => {
+    for (const o of occluders) {
+      o.goal = 1;
+      if (focus) {
+        const { c, t } = focus;
+        // distance from occluder to the camera→target segment on the ground plane, near the target end
+        const dx = c.x - t.x; const dz = c.z - t.z;
+        const l2 = dx * dx + dz * dz || 1;
+        const u = ((o.x - t.x) * dx + (o.z - t.z) * dz) / l2;
+        if (u > -0.02 && u < 0.6) {
+          const d = Math.hypot(o.x - (t.x + dx * u), o.z - (t.z + dz * u));
+          if (d < o.r + 0.9) o.goal = 0.04;
+        }
+      }
+      if (Math.abs(o.k - o.goal) < 0.002) continue;
+      o.k += (o.goal - o.k) * Math.min(1, dt * 8);
+      occA.makeTranslation(o.x, 0, o.z).multiply(occB.makeScale(o.k, o.k, o.k)).multiply(occM.makeTranslation(-o.x, 0, -o.z));
+      o.meshes.forEach((m, mi) => { m.setMatrixAt(o.i, occM.copy(occA).multiply(o.base[mi])); m.instanceMatrix.needsUpdate = true; });
+    }
+  });
+
   // ---- landmarks & village (Kenney Fantasy Town pieces assembled into cottages)
   async function cottage(x, z, rot, { floors = 1, wood = true, roof = 'roof-high-point', variant = false } = {}) {
     const g = new THREE.Group();
@@ -807,6 +841,7 @@ export async function buildWorld(stage, board, { sharedAsset, asset }) {
     showArrows,
     hideArrows,
     setFrenzy,
+    setFocus,
     isBridge: (a, b) => bridged.has(`${a}-${b}`),
     update(dt, t) { for (const fn of frameFns) fn(dt, t); },
   };

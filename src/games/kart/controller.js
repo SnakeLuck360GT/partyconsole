@@ -16,7 +16,7 @@ const CSS = `
 .kc-chip{font-size:16px;font-weight:600;background:rgba(255,255,255,.09);padding:4px 11px;border-radius:999px;white-space:nowrap;display:flex;align-items:center;gap:5px}
 .kc-chip svg{width:16px;height:16px}
 .kc-msg{flex:1;text-align:center;font-size:17px;font-weight:600;color:#ffcc00;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kc-gear{flex:none;width:44px;height:36px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;font-size:20px}
+.kc-gear{flex:none;display:grid;place-items:center;width:44px;height:36px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;font-size:20px}
 .kc-body{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1.35fr;position:relative}
 .kc-l,.kc-m,.kc-r{position:relative;min-width:0;min-height:0}
 .kc-l{display:flex;align-items:center;justify-content:center;gap:12px;flex-direction:column}
@@ -59,6 +59,11 @@ const CSS = `
 .kc-rev{position:absolute;inset:8px;border-radius:22px;border:3px dashed rgba(255,204,0,.6);display:none;place-items:center;text-align:center;color:#ffcc00;font-weight:700;font-size:20px;background:rgba(255,204,0,.08)}
 .kc-rev.on{display:grid}
 .kc-rev.down{background:rgba(255,120,0,.35);border-style:solid;color:#fff}
+.kc-who{position:absolute;inset:0;z-index:4;display:grid;place-items:center;text-align:center;background:var(--wc);color:#fff;pointer-events:none;animation:kcwho .35s ease-out}
+.kc-who b{display:block;font-size:64px;line-height:1;font-style:italic}
+.kc-who span{display:block;font-size:26px;font-weight:700;margin-top:8px}
+.kc-who.out{transition:opacity .35s;opacity:0}
+@keyframes kcwho{from{opacity:0;transform:scale(1.1)}}
 .kc-flash{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .45s}
 .kc-flash.on{opacity:1;transition:none}
 .kc-over{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:rgba(8,10,24,.92);text-align:center;padding:14px;overflow:auto}
@@ -324,8 +329,8 @@ export default function start(ctx) {
     el.style.setProperty('--me', lastState?.color || ctx.player.color);
     el.innerHTML = `
       <div class="kc-top"><div class="kc-pos">–</div><div class="kc-chip kc-lapc">LAP –</div><div class="kc-chip kc-coin">${COIN_SVG}<span>0</span></div>
-        <div class="kc-msg"></div><button class="kc-gear" aria-label="Settings">⚙</button></div>
-      <div class="kc-body"><div class="kc-l"></div><div class="kc-m"></div><div class="kc-r"></div><div class="kc-rev">HOLD TO REV 🔥<br><small style="font-weight:500;font-size:14px">let go = no rocket start</small></div></div>
+        <div class="kc-msg"></div><button class="kc-gear" aria-label="Settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2.4" fill="#14172e"/><circle cx="15" cy="17" r="2.4" fill="#14172e"/></svg></button></div>
+      <div class="kc-body"><div class="kc-l"></div><div class="kc-m"></div><div class="kc-r"></div><div class="kc-rev">HOLD TO REV<br><small style="font-weight:500;font-size:14px">let go = no rocket start</small></div></div>
       <div class="kc-flash"></div>`;
     root.appendChild(el);
     const L = el.querySelector('.kc-l'); const M = el.querySelector('.kc-m'); const R = el.querySelector('.kc-r');
@@ -367,8 +372,8 @@ export default function start(ctx) {
     if (!engineOn) {
       const over = document.createElement('div');
       over.className = 'kc-over';
-      over.innerHTML = `<div><button class="kc-key">TAP TO START ENGINE 🔑</button>
-        <p>${prefs.steer === 'tilt' ? 'Hold your phone sideways like a steering wheel and tilt to steer.' : 'Drag on the left side to steer.'}<br>Gas is automatic · hold DRIFT in corners · ⚙ for options</p></div>`;
+      over.innerHTML = `<div><button class="kc-key">TAP TO START ENGINE</button>
+        <p>${prefs.steer === 'tilt' ? 'Hold your phone sideways like a steering wheel and tilt to steer.' : 'Drag on the left side to steer.'}<br>Gas is automatic · hold DRIFT in corners · the gear button has options</p></div>`;
       over.querySelector('.kc-key').addEventListener('click', startEngine);
       el.appendChild(over);
       pad.over = over;
@@ -391,12 +396,12 @@ export default function start(ctx) {
     over.className = 'kc-over';
     const seg = (key, opts) => `<div class="kc-seg" data-k="${key}">${opts.map(([v, l]) => `<button data-v="${v}" class="${String(prefs[key]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
     over.innerHTML = `<div class="kc-set">
-      <h3>⚙ Controls</h3>
-      <div class="kc-row"><span>Steering</span>${seg('steer', [['tilt', '📱 Tilt'], ['touch', '👆 Touch']])}</div>
+      <h3>Controls</h3>
+      <div class="kc-row"><span>Steering</span>${seg('steer', [['tilt', 'Tilt'], ['touch', 'Touch']])}</div>
       <div class="kc-row"><span>Sensitivity</span>${seg('sens', [['low', 'Low'], ['med', 'Medium'], ['high', 'High']])}</div>
-      <div class="kc-row"><span>Gas</span>${seg('autoGas', [['true', '🟢 Auto-gas'], ['false', '👆 Gas button']])}</div>
-      <div class="kc-row"><span>Assist</span>${seg('smart', [['true', '📡 Smart Steering'], ['false', 'Off (pro)']])}</div>
-      <div class="kc-row"><span>Tilt</span><button class="recenter">🎯 Recenter</button><button class="invert">${prefs.invert ? '✅' : '⬜'} Invert</button></div>
+      <div class="kc-row"><span>Gas</span>${seg('autoGas', [['true', 'Auto-gas'], ['false', 'Gas button']])}</div>
+      <div class="kc-row"><span>Assist</span>${seg('smart', [['true', 'Smart Steering'], ['false', 'Off (pro)']])}</div>
+      <div class="kc-row"><span>Tilt</span><button class="recenter">Recenter</button><button class="invert">Invert: ${prefs.invert ? 'on' : 'off'}</button></div>
       <div class="kc-row"><button class="done">Done</button></div></div>`;
     over.querySelectorAll('.kc-seg button').forEach((b) => b.addEventListener('click', () => {
       const k = b.parentElement.dataset.k;
@@ -409,7 +414,7 @@ export default function start(ctx) {
     over.querySelector('.invert').addEventListener('click', (e) => {
       prefs.invert = !prefs.invert;
       tiltCtl?.setInvert(prefs.invert);
-      e.currentTarget.textContent = `${prefs.invert ? '✅' : '⬜'} Invert`;
+      e.currentTarget.textContent = `Invert: ${prefs.invert ? 'on' : 'off'}`;
     });
     over.querySelector('.done').addEventListener('click', async () => {
       store('steer2', prefs.steer); store('invert', prefs.invert ? '1' : '0'); store('autogas', prefs.autoGas ? '1' : '0'); store('sens2', prefs.sens); store('smart', prefs.smart ? '1' : '0'); schedule(true);
@@ -450,7 +455,7 @@ export default function start(ctx) {
   }
   function showLobby(m) {
     if (m.role !== 'racer') {
-      showMsg('<div class="big">🅿️</div><b>Race is full, you\'re spectating</b><div class="muted">Kart Chaos has 4 driver seats. Watch the TV and cheer!</div>');
+      showMsg('<b>Race is full, you\'re spectating</b><div class="muted">Kart Chaos has 8 driver seats. Watch the TV and cheer!</div>');
       return;
     }
     const pick = m.pick;
@@ -517,10 +522,10 @@ export default function start(ctx) {
     if (top.dataset.key !== key) {
       top.dataset.key = key;
       top.innerHTML = m.admin
-        ? `<button class="kc-tb tp">◀</button><div class="kc-tname">${t.emoji} ${t.name}</div><button class="kc-tb tn">▶</button>
+        ? `<button class="kc-tb tp">◀</button><div class="kc-tname">${t.name}</div><button class="kc-tb tn">▶</button>
            <div class="kc-ccs">${[50, 100, 150].map((c) => `<button data-cc="${c}" class="${c === m.sel.cc ? 'sel' : ''}">${c}cc</button>`).join('')}</div>
            <button class="kc-go">START ▶</button><span class="kc-left"></span>`
-        : `<div class="kc-tname">${t.emoji} ${t.name} · ${m.sel.cc}cc</div><div class="kc-msg">Pick your driver &amp; kart</div><span class="kc-left"></span>`;
+        : `<div class="kc-tname">${t.name} · ${m.sel.cc}cc</div><div class="kc-msg">Pick your driver &amp; kart</div><span class="kc-left"></span>`;
       if (m.admin) {
         top.querySelector('.tp').addEventListener('click', () => { vibrate('select'); ctx.send({ type: 'pick', track: (m.sel.track + m.tracks.length - 1) % m.tracks.length }); });
         top.querySelector('.tn').addEventListener('click', () => { vibrate('select'); ctx.send({ type: 'pick', track: (m.sel.track + 1) % m.tracks.length }); });
@@ -622,9 +627,9 @@ export default function start(ctx) {
     lastStatus = m;
     if (!pad) return;
     pad.pos.innerHTML = `${ordinal(m.finished && m.place ? m.place : m.pos)}<small> / ${m.total}</small>`;
-    pad.lap.textContent = m.finished ? `🏁 ${m.time}` : `LAP ${m.lap}/${m.laps}`;
+    pad.lap.textContent = m.finished ? `FINISHED ${m.time}` : `LAP ${m.lap}/${m.laps}`;
     pad.coin.textContent = String(m.coins);
-    if (m.ww && !m.finished) note('↺ WRONG WAY', 1500);
+    if (m.ww && !m.finished) note('WRONG WAY', 1500);
   }
 
   function applyPhase() {
@@ -634,7 +639,7 @@ export default function start(ctx) {
     if (phase === 'loading' || phase === 'intro') note(lastState?.track ? `${lastState.track} · get ready!` : 'Get ready!', 6000);
     else if (phase === 'countdown') note('Hold REV at "2" for a ROCKET START', 4000);
     else if (phase === 'race' && !lastStatus?.finished) note('GO GO GO!', 1200);
-    else if (phase === 'post' || phase === 'results') note('🏁 Race over!', 60000);
+    else if (phase === 'post' || phase === 'results') note('Race over', 60000);
   }
 
   function flash(color) {
@@ -663,17 +668,28 @@ export default function start(ctx) {
         applyPhase();
         return;
       }
-      if (m.role === 'full') showMsg('<div class="big">🅿️</div><b>Race is full, you\'re spectating</b><div class="muted">4 drivers max. You\'ll get a seat if someone leaves before the next race.</div>');
-      else showMsg(`<div class="big">📺</div><b>Race in progress</b><div class="muted">You'll join the next race${m.track ? ` · ${m.track}` : ''}. Watch the TV!</div>`);
+      if (m.role === 'full') showMsg('<b>Race is full, you\'re spectating</b><div class="muted">8 drivers max. You\'ll get a seat if someone leaves before the next race.</div>');
+      else showMsg(`<b>Race in progress</b><div class="muted">You'll join the next race${m.track ? ` · ${m.track}` : ''}. Watch the TV!</div>`);
+    } else if (m.type === 'whois') {
+      if (!pad) return;
+      pad.el.querySelector('.kc-who')?.remove();
+      const w = document.createElement('div');
+      w.className = 'kc-who';
+      w.style.setProperty('--wc', m.color || ctx.player.color);
+      w.innerHTML = `<div><b>P${m.n}</b><span>${m.where ? `You're ${m.where} on the TV` : 'Look for your name and arrow on the TV'}</span><span style="font-weight:500;font-size:18px">Your kart has this colour ring</span></div>`;
+      pad.el.appendChild(w);
+      vibrate('select');
+      setTimeout(() => w.classList.add('out'), m.ms || 3200);
+      setTimeout(() => w.remove(), (m.ms || 3200) + 400);
     } else if (m.type === 'status') {
       applyStatus(m);
     } else if (m.type === 'item') {
       applyItem(m);
     } else if (m.type === 'buzz') {
       const k = m.kind;
-      if (k === 'hit') { flash('rgba(255,40,40,.75)'); note('💥 Ouch!'); }
-      else if (k === 'boost') { flash('rgba(255,170,0,.5)'); note('🔥 BOOST!', 900); }
-      else if (k === 'star') { flash('rgba(255,230,80,.6)'); note('⭐ SUPER STAR!', 2000); }
+      if (k === 'hit') { flash('rgba(255,40,40,.75)'); note('Ouch!'); }
+      else if (k === 'boost') { flash('rgba(255,170,0,.5)'); note('BOOST!', 900); }
+      else if (k === 'star') { flash('rgba(255,230,80,.6)'); note('SUPER STAR!', 2000); }
       else if (k === 'burnout') { flash('rgba(120,120,120,.6)'); note('Too early: burnout!', 1500); vibrate('error'); }
       else if (k === 'wall') flash('rgba(255,255,255,.25)');
       else if (k.startsWith('drift')) {
@@ -685,11 +701,11 @@ export default function start(ctx) {
         if (pad) pad.driftT = setTimeout(() => pad?.drift.classList.remove('l1', 'l2', 'l3'), 1600);
       } else if (k === 'lap') note('Lap complete!', 1200);
       else if (k === 'item') vibrate('select');
-      else if (k === 'finish') note('🏁 FINISHED!', 60000);
+      else if (k === 'finish') note('FINISHED!', 60000);
     }
   });
 
-  showMsg('<div class="big">🏎️</div><b>Kart Chaos</b><div class="muted">Connecting…</div>');
+  showMsg('<b>Kart Chaos</b><div class="muted">Connecting…</div>');
   ctx.send({ type: 'hello' });
 
   return {

@@ -20,6 +20,7 @@ export const T = {
   staminaDrain: 0.34,
   staminaRegen: 0.22,
   staminaMinRestart: 0.3,
+  tapTime: 0.17, // KICK held longer than this starts charging a shot
   chargeTime: 0.95, // seconds from 0 to full power
   gravity: 19,
   bounce: 0.56,
@@ -42,7 +43,7 @@ export const T = {
 /** Pitch dimensions scale with the bigger team's size. */
 export function pitchFor(teamSize) {
   const n = Math.max(1, teamSize);
-  const HL = Math.min(50, 16 + n * 3.4); // half length
+  const HL = Math.min(40, 15 + n * 2.8); // half length
   const HW = Math.round(HL * 0.63 * 10) / 10; // half width
   const GW = Math.min(5.2, 2.7 + n * 0.28); // goal half width
   const GH = Math.min(3.0, 2.2 + n * 0.08); // goal height

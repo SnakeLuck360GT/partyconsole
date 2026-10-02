@@ -1,6 +1,6 @@
 # PartyConsole: handoff for a new session
 
-The project is an AirConsole-style party console that runs in the browser. The TV/laptop opens `screen.html` and runs the games in three.js. Phones open `controller.html` and act as controllers. Devices talk over WebRTC via PeerJS. There is no game server, only the public PeerJS broker for the handshake. It is **localhost / home network only**, with no public hosting.
+The project is an AirConsole-style party console that runs in the browser. The TV/laptop opens `screen.html` and runs the games in three.js. Phones open `controller.html` and act as controllers. Devices talk over WebRTC via PeerJS. There is no game server, only the public PeerJS broker for the handshake. It is **hosted on Netlify** from git (`netlify.toml` runs `npm run build`, so a failing build means a failed deploy), and also runs on localhost / the LAN. Phones that can't reach the TV directly (mobile data, guest Wi-Fi, routers without NAT hairpinning) need a TURN relay: `netlify/functions/ice.mjs` serves credentials at `/api/ice` once `CLOUDFLARE_TURN_KEY_ID` + `CLOUDFLARE_TURN_API_TOKEN` (or `TURN_URLS`/`TURN_USERNAME`/`TURN_CREDENTIAL`) are set in Netlify. Without them it falls back to STUN only.
 
 ## Run it
 - `npm run dev` (live reload is OFF on purpose; `HMR=1 npm run dev` turns it on).
@@ -8,7 +8,6 @@ The project is an AirConsole-style party console that runs in the browser. The T
 - On the TV, open `http://<lan-ip>:5173/`. The root redirects phones → controller and tablets/PCs → screen.
 - Test without internet: add `?local=1` to both `screen.html` and `controller.html` (uses BroadcastChannel between tabs).
 - Headless test: `node scripts/smoke.mjs <gameId> [players] [seconds]` writes screenshots to `scripts/out/<id>/`.
-- `npm run build` currently FAILS only because `src/games/doodle/` is half-built (missing `style-screen.js`).
 
 ## Key files
 - `GAME_DEV.md`: the game API, quality bar, phone orientation/rotation rules, haptics API and testing rules. **Read it first.**

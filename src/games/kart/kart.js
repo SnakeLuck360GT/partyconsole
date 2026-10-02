@@ -109,6 +109,11 @@ export class Kart {
       this.label.material.depthTest = true;
       this.root.add(this.label);
       this.labelAspect = this.label.scale.x / this.label.scale.y;
+      // "this one is you" arrow, shown during the pre-race who's-who
+      this.marker = new THREE.Sprite(new THREE.SpriteMaterial({ map: arrowTexture(racer.color), depthTest: false, transparent: true }));
+      this.marker.renderOrder = 1000;
+      this.marker.visible = false;
+      this.root.add(this.marker);
     }
     if (night) {
       const hl = new THREE.Mesh(new THREE.PlaneGeometry(5, 11), new THREE.MeshBasicMaterial({ map: glowTex, color: 0xfff0c8, transparent: true, opacity: 0.38, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -555,6 +560,18 @@ export class Kart {
     this.label.visible = d > 9 && d < 220;
   }
 
+  /** Size / bob the who's-who arrow for one viewport (fixed on-screen size, above the name tag if shown). */
+  fitMarker(cam, viewH, t) {
+    if (!this.marker?.visible) return;
+    const p = cam.position;
+    const d = Math.hypot(p.x - this.x, p.y - this.y, p.z - this.z);
+    const px = Math.min(64, Math.max(30, viewH * 0.085));
+    const h = px * (2 * d * Math.tan((cam.fov * Math.PI) / 360)) / Math.max(1, viewH);
+    this.marker.scale.set(h, h, 1);
+    const top = this.label?.visible ? this.label.position.y + this.label.scale.y * 0.5 : 2.6;
+    this.marker.position.y = top + h * (0.65 + 0.12 * Math.sin(t * 7));
+  }
+
   /** Particles + skid marks (call after update). */
   emitFx(dt) {
     const fx = this.fx;
@@ -620,11 +637,28 @@ export class Kart {
   dispose() {
     this.scene.remove(this.root);
     this.root.traverse((o) => {
-      if (o.isSprite && o.material !== this.flameMat) { o.material.map?.dispose(); o.material.dispose(); }
+      if (o.isSprite && o.material !== this.flameMat) { if (o !== this.marker) o.material.map?.dispose(); o.material.dispose(); }
       if (o.isMesh && (o === this.blob || o === this.ring)) { o.geometry.dispose(); o.material.dispose(); }
     });
     this.flameMat.dispose();
   }
+}
+
+const arrowCache = new Map();
+function arrowTexture(color) {
+  if (arrowCache.has(color)) return arrowCache.get(color);
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 128;
+  const g = c.getContext('2d');
+  g.beginPath();
+  g.moveTo(64, 116); g.lineTo(14, 42); g.lineTo(42, 42); g.lineTo(42, 10); g.lineTo(86, 10); g.lineTo(86, 42); g.lineTo(114, 42);
+  g.closePath();
+  g.lineJoin = 'round'; g.lineWidth = 10; g.strokeStyle = '#fff'; g.stroke();
+  g.fillStyle = color; g.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  arrowCache.set(color, t);
+  return t;
 }
 
 export function hexToRgba(hex, a) {

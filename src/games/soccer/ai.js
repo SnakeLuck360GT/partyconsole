@@ -1,5 +1,5 @@
 // Bot brains: fill in `p.input` for bot players each frame (same input shape as humans).
-import { clamp } from './config.js';
+import { clamp, T } from './config.js';
 
 /** Formation slots for k field players: [{u, v}] with u in [-1,0] (own half, 0 = centre line), v in [-1,1] across. */
 export function formation(k) {
@@ -24,9 +24,9 @@ function steer(p, tx, tz, { urgent = false, arrive = 0.6 } = {}) {
   const dx = tx - p.x;
   const dz = tz - p.z;
   const d = Math.hypot(dx, dz);
-  if (d < arrive) { p.input.x = 0; p.input.z = 0; return d; }
+  if (d < arrive) { p.input.x = 0; p.input.z = 0; p.input.b = false; return d; }
   let m = d > 3.5 ? 1 : d / 3.5;
-  if (!urgent || p.stamina < 0.35) m = Math.min(m, 0.86);
+  p.input.b = urgent && d > 2.5 && p.stamina > 0.35 && !p.exhausted;
   p.input.x = (dx / d) * m;
   p.input.z = (dz / d) * m;
   return d;
@@ -36,16 +36,20 @@ export function updateBots(sim, dt) {
   const { players, ball: b, pitch } = sim;
   const { HL, HW, GW } = pitch;
   if (sim.frozen) {
-    for (const p of players) if (p.bot) { p.input.x = 0; p.input.z = 0; p.input.a = false; p.input.b = false; }
+    for (const p of players) if (p.bot) { p.input.x = 0; p.input.z = 0; p.input.a = false; p.input.b = false; if (p.brain) p.brain.hold = 0; }
     return;
   }
-  // Rank field players by distance to the ball per team (humans included).
-  const ranks = new Map();
-  for (const team of [0, 1]) {
-    const list = players.filter((p) => p.team === team && p.role !== 'keeper' && p.stun <= 0)
-      .map((p) => ({ p, d: Math.hypot(b.x - p.x, b.z - p.z) }))
-      .sort((x, y) => x.d - y.d);
-    list.forEach((e, i) => ranks.set(e.p, i));
+  // Rank field players by distance to the ball per team (humans included). O(n^2) but allocation-free.
+  for (const p of players) p._bd = Math.hypot(b.x - p.x, b.z - p.z);
+  for (const p of players) {
+    let r = 0;
+    if (p.role !== 'keeper') {
+      for (const q of players) {
+        if (q === p || q.team !== p.team || q.role === 'keeper' || q.stun > 0 || !q.onPitch) continue;
+        if (q._bd < p._bd || (q._bd === p._bd && q.id < p.id)) r++;
+      }
+    }
+    p._rank = r;
   }
 
   for (const p of players) {
@@ -58,7 +62,7 @@ export function updateBots(sim, dt) {
     // Charging a shot: hold until target charge, then release.
     if (br.hold > 0) {
       br.hold -= dt;
-      inp.a = br.hold > 0 && b.owner === p;
+      inp.a = br.hold > 0 && (b.owner === p || Math.hypot(b.x - p.x, b.z - p.z) < 1.4);
       if (!inp.a) br.hold = 0;
       // keep facing the goal while charging
       const gx = side * HL;
@@ -101,21 +105,21 @@ export function updateBots(sim, dt) {
       if (br.next <= 0) {
         br.next = 0.12 + Math.random() * 0.15;
         if (dGoal < range && facingGoal && (dGoal < range * 0.55 || Math.random() < 0.35)) {
-          br.hold = 0.28 + clamp(dGoal / 26, 0, 0.55) * 0.95;
-          inp.a = true;
+          br.hold = T.tapTime + 0.05 + clamp(dGoal / 24, 0.15, 0.75) * T.chargeTime;
+          inp.a = true; inp.aDown = true;
           br.aimZ = clamp(br.aimZ, -GW * 0.7, GW * 0.7);
           continue;
         }
         const mate = sim.pickPassTarget(p);
         if (mate && ((pressure < 1.9 && Math.random() < 0.45) || (br.ownedFor > 3.5 && Math.random() < 0.3))) {
           const mateAhead = (mate.x - p.x) * side > -4;
-          if (mateAhead) { inp.b = true; }
+          if (mateAhead) { inp.aDown = true; inp.a = false; }
         }
       }
       continue;
     }
 
-    const rank = ranks.get(p) ?? 9;
+    const rank = p.stun > 0 ? 9 : p._rank;
     const teamHas = b.owner && b.owner.team === p.team;
     const oppHas = b.owner && b.owner.team !== p.team;
     const bd = Math.hypot(b.x - p.x, b.z - p.z);
@@ -132,7 +136,7 @@ export function updateBots(sim, dt) {
         br.next = 0.25;
         const toBall = Math.atan2(b.z - p.z, b.x - p.x);
         const facing = Math.cos(toBall - p.face) > 0.8;
-        if (facing && Math.random() < 0.28) inp.b = true;
+        if (facing && Math.random() < 0.28 * (p.skill ?? 0.9)) inp.bDown = true;
       }
       continue;
     }
@@ -173,8 +177,8 @@ function keeper(sim, p, br, side, dt) {
     if (br.ownedFor > 0.55 && Math.cos(p.face - aim) > 0.9) {
       br.ownedFor = 0;
       const mate = sim.pickPassTarget(p);
-      if (mate && Math.random() < 0.55) inp.b = true;
-      else { br.hold = 0.55; br.aimZ = b.z; inp.a = true; }
+      if (mate && Math.random() < 0.55) { inp.aDown = true; inp.a = false; }
+      else { br.hold = T.tapTime + 0.5; br.aimZ = b.z; inp.a = true; inp.aDown = true; }
     }
     return;
   }

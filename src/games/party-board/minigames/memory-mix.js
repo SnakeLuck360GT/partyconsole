@@ -68,7 +68,7 @@ export default {
       boothRing.position.set(0, 1.15, -5.2);
       s.scene.add(boothRing);
       const robotModel = await loadModel(env.sharedAsset('characters/robot/robot-expressive.glb'));
-      const dj = new Char(s, { id: 'dj', name: 'DJ Bot', color: '#b86bff', colorHex: 0xb86bff }, robotModel, { height: 3.0, ring: false });
+      const dj = new Char(s, { id: 'dj', name: 'DJ Bot', color: '#b86bff', colorHex: 0xb86bff }, robotModel, { height: 3.0, ring: false, label: false });
       dj.pos.set(0, 1.2, -5.2);
       dj.groundY = 1.2;
       dj.play('Dance');

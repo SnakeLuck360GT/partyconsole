@@ -48,7 +48,8 @@ export function createSim({ pitch, onEvent = () => {} }) {
       charging: false, charge: 0,
       slide: 0, slideDir: 0, slideHit: false, tackleCd: 0, stun: 0, stunKind: '',
       kickAnim: 0, passAnim: 0, protect: 0,
-      input: { x: 0, z: 0, a: false, aTap: false, b: false },
+      input: { x: 0, z: 0, a: false, aDown: false, b: false, bDown: false },
+      aHeld: false, aT: 0, onPitch: true,
       prevA: false,
       stats: { goals: 0, assists: 0, tackles: 0, shots: 0, ownGoals: 0 },
       celebrate: 0,
@@ -140,7 +141,7 @@ export function createSim({ pitch, onEvent = () => {} }) {
       const a = Math.atan2(dz, dx) + (Math.random() - 0.5) * 0.09 * charge;
       dx = Math.cos(a); dz = Math.sin(a);
     }
-    const speed = 11 + 17 * charge;
+    const speed = 13 + 16 * charge;
     const vy = charge < 0.55 ? 0.6 + charge * 2.2 : 1.8 + (charge - 0.55) * 15;
     b.owner = null;
     b.passTarget = null;
@@ -229,11 +230,26 @@ export function createSim({ pitch, onEvent = () => {} }) {
   function startSlide(p) {
     p.slide = T.slideTime;
     p.slideHit = false;
+    const b = sim.ball;
+    const bd = Math.hypot(b.x - p.x, b.z - p.z);
     const m = Math.hypot(p.input.x, p.input.z);
-    p.slideDir = m > 0.3 ? Math.atan2(p.input.z, p.input.x) : p.face;
+    // Aim assist: slide at the ball when it's close, otherwise along the stick.
+    if (bd < 3.6) p.slideDir = Math.atan2(b.z + b.vz * 0.12 - p.z, b.x + b.vx * 0.12 - p.x);
+    else p.slideDir = m > 0.3 ? Math.atan2(p.input.z, p.input.x) : p.face;
     p.face = p.slideDir;
     p.tackleCd = T.tackleCooldown;
     onEvent({ type: 'slide', p });
+  }
+
+  /** Is there something worth sliding at? (opponent carrying the ball close by, or a contested loose ball) */
+  function tackleTarget(p) {
+    const b = sim.ball;
+    const d = Math.hypot(b.x - p.x, b.z - p.z);
+    if (b.owner && b.owner.team !== p.team) return d < 3.4;
+    if (!b.owner && d < 2.6 && b.y < 0.9) {
+      for (const q of sim.players) if (q.team !== p.team && Math.hypot(b.x - q.x, b.z - q.z) < 2.2) return true;
+    }
+    return false;
   }
 
   function stun(p, secs, kind) {
@@ -258,7 +274,8 @@ export function createSim({ pitch, onEvent = () => {} }) {
     if (sim.frozen) {
       p.vx *= Math.max(0, 1 - dt * 8);
       p.vz *= Math.max(0, 1 - dt * 8);
-      p.charging = false; p.charge = 0; p.sprinting = false;
+      p.charging = false; p.charge = 0; p.sprinting = false; p.aHeld = false;
+      inp.aDown = false; inp.bDown = false;
       p.prevA = inp.a;
       p.stamina = Math.min(1, p.stamina + dt * 0.5);
       p.x += p.vx * dt; p.z += p.vz * dt;
@@ -269,7 +286,8 @@ export function createSim({ pitch, onEvent = () => {} }) {
       p.stun -= dt;
       const k = Math.max(0, 1 - dt * 5);
       p.vx *= k; p.vz *= k;
-      p.charging = false; p.charge = 0;
+      p.charging = false; p.charge = 0; p.aHeld = false;
+      inp.aDown = false; inp.bDown = false;
       p.prevA = inp.a;
       p.x += p.vx * dt; p.z += p.vz * dt;
       return;
@@ -283,29 +301,31 @@ export function createSim({ pitch, onEvent = () => {} }) {
       p.x += p.vx * dt; p.z += p.vz * dt;
       slideContacts(p);
       p.prevA = inp.a;
+      inp.aDown = false; inp.bDown = false; p.aHeld = false;
       if (p.slide <= 0) { p.stun = 0.22; p.stunKind = 'getup'; }
       return;
     }
 
-    // --- buttons
+    // --- buttons: KICK tap = pass, hold = charged shot. SPRINT held = sprint; pressed near a ball carrier = slide tackle.
     const hasBall = b.owner === p;
-    if (inp.a && !p.prevA) { p.charging = true; p.charge = 0; }
-    if (p.charging) {
-      p.charge = Math.min(1, p.charge + dt / T.chargeTime);
-      if (!inp.a) {
+    if (inp.aDown) { inp.aDown = false; p.aHeld = true; p.aT = 0; }
+    if (p.aHeld) {
+      if (inp.a) {
+        p.aT += dt;
+        if (p.aT > T.tapTime) { p.charging = true; p.charge = Math.min(1, (p.aT - T.tapTime) / T.chargeTime); }
+      } else {
+        p.aHeld = false;
+        if (p.charging) kick(p, p.charge);
+        else if (hasBall || canReachBall(p, 1.3)) pass(p);
+        else p.kickAnim = 0.2;
         p.charging = false;
-        kick(p, p.charge);
         p.charge = 0;
       }
-    } else if (inp.aTap) {
-      kick(p, 0.25);
     }
-    inp.aTap = false;
     p.prevA = inp.a;
-    if (inp.b) {
-      inp.b = false;
-      if (hasBall) pass(p);
-      else if (p.tackleCd <= 0) { startSlide(p); return; }
+    if (inp.bDown) {
+      inp.bDown = false;
+      if (!hasBall && p.tackleCd <= 0 && tackleTarget(p)) { startSlide(p); return; }
     }
 
     // --- movement
@@ -313,7 +333,7 @@ export function createSim({ pitch, onEvent = () => {} }) {
     let mz = inp.z;
     let m = Math.hypot(mx, mz);
     if (m > 1) { mx /= m; mz /= m; m = 1; }
-    const wantsSprint = m > 0.9 && !p.charging;
+    const wantsSprint = inp.b && m > 0.25 && !p.charging;
     if (wantsSprint && !p.exhausted && p.stamina > 0) {
       p.sprinting = true;
       p.stamina = Math.max(0, p.stamina - dt * T.staminaDrain);

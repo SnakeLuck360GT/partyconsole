@@ -115,15 +115,28 @@ try {
   await submit(ph, 'zzzzzz');
   await expectFb(ph, /Needs/, 'word missing the letters is caught on the phone');
 
-  // ---- blocked word
+  // ---- offensive word: a valid play (passes the bomb, counts), but masked everywhere on the TV
   const bad = words.find((w) => isOffensive(w) && w.length >= 4);
   await force(bad.slice(1, 3));
-  await ph.waitForTimeout(200); // the screen ignores submits closer than 150 ms apart
+  s = await wb();
   await submit(ph, bad);
-  await expectFb(ph, /Keep it clean/, 'offensive word rejected');
+  const passedBad = await screen.waitForFunction((t) => window.__wb.turnId !== t, s.turnId, { timeout: 4000 }).then(() => true, () => false);
+  ok(passedBad, 'offensive word accepted and passes the bomb');
+  used.add(bad);
+  const feedTop = (await screen.textContent('.wb-feed .row')).trim().toLowerCase();
+  const tvText = (await screen.evaluate(() => document.querySelector('.wb-root').innerText)).toLowerCase();
+  ok(!tvText.includes(bad) && feedTop.startsWith(bad[0]) && feedTop.includes('*'), `TV masks it (shows "${feedTop.toUpperCase()}")`);
+  ok(/Passed/.test(await fbText(ph)) && (await fbText(ph)).toLowerCase().includes(bad), "the player's own phone shows the word uncensored");
+  await screen.waitForTimeout(300);
+  s = await wb();
+  ph = phones.get(s.holder);
 
-  // ---- live typing (TV pill + phone feedback) then a valid word
+  // ---- live typing (TV pill + phone feedback) then a valid word; a stale error must clear as soon as they type
   await force('ing');
+  s = await wb();
+  await submit(ph, 'singqqx');
+  await screen.waitForFunction(() => /Not a word/.test(document.querySelector('.wb-pill')?.textContent || ''), null, { timeout: 4000 })
+    .then(() => ok(true, 'TV typing box shows the rejection reason'), () => ok(false, 'TV typing box shows the rejection reason'));
   await ph.fill('.wbc-form input', '');
   await ph.type('.wbc-form input', 'sin', { delay: 30 });
   await screen.waitForTimeout(250);
@@ -132,6 +145,7 @@ try {
   await screen.waitForTimeout(250);
   ok(/Got the letters/.test(await fbText(ph)), 'live feedback: letters found');
   ok(/SINGER/.test(await screen.textContent('.wb-pill')), 'TV shows the live typing');
+  ok(!/Not a word/.test(await screen.textContent('.wb-pill')) && !/Not a word/.test(await fbText(ph)), 'the old error cleared once they typed again (TV + phone)');
   await screen.screenshot({ path: `${out}/02-typing.png` });
   await ph.screenshot({ path: `${out}/p02-turn-typing.png` });
   await other.screenshot({ path: `${out}/p03-waiting.png` });

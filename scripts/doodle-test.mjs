@@ -340,8 +340,13 @@ try {
       await sleep(700);
       await shot(tv, `tv-tp-play-${k + 2}`);
     }
-    await admin2.click('[data-nav="skip"]');
-    await until(() => tv.$('.tpp-strip'), 10000, 'chain overview');
+    // skip the rest of the current chain → its overview (retry if the skip landed on an overview already)
+    await until(async () => {
+      if (await tv.$('.tpp-strip')) return true;
+      await admin2.click('[data-nav="skip"]');
+      await sleep(1500);
+      return !!(await tv.$('.tpp-strip'));
+    }, 20000, 'chain overview');
     await sleep(1800);
     await shot(tv, 'tv-tp-overview');
     await admin2.click('[data-nav="end"]');

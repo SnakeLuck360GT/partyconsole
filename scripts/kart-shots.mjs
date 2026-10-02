@@ -46,7 +46,7 @@ try {
     await p.setViewportSize({ width: 844, height: 390 });
     watch(p, `phone${i}`);
     await p.goto(`${base}controller.html?local=1&room=${room}`);
-    await p.fill('#name-input', ['Alice', 'Bob', 'Chloe', 'Dmitri', 'Eve'][i]);
+    await p.fill('#name-input', ['Alice', 'Bob', 'Chloe', 'Dmitri', 'Eve', 'Farah', 'Gus', 'Hana'][i]);
     await p.click('#join-btn');
     phones.push(p);
   }
