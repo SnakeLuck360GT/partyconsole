@@ -127,6 +127,15 @@ export function createFX(scene, camera, renderer) {
     return p;
   }
 
+  // Allocation-free emitter for per-frame effects (trails, ambient snow/embers).
+  const scratch = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, g: 0, drag: 0, life: 1, size: 1, size1: 1, alpha: 1, shape: 0, rot: 0, vr: 0, color: 0xffffff, floor: -999 };
+  function puff(x, y, z, vx, vy, vz, life, s0, s1, a, color, shp, g = 0, drag = 0) {
+    scratch.x = x; scratch.y = y; scratch.z = z; scratch.vx = vx; scratch.vy = vy; scratch.vz = vz;
+    scratch.life = life; scratch.size = s0; scratch.size1 = s1; scratch.alpha = a; scratch.color = color; scratch.shape = shp;
+    scratch.g = g; scratch.drag = drag; scratch.rot = Math.random() * 6.28;
+    return spawn(scratch);
+  }
+
   // ------------------------------------------------------------ shockwave rings
   const ringGeo = new THREE.RingGeometry(0.85, 1, 64);
   ringGeo.rotateX(-Math.PI / 2);
@@ -226,6 +235,7 @@ export function createFX(scene, camera, renderer) {
   const api = {
     group,
     spawn,
+    puff,
     ring,
     flash,
     addWarn,
@@ -253,7 +263,7 @@ export function createFX(scene, camera, renderer) {
       }
     },
     speedLine(x, y, z, color = 0xffffff) {
-      spawn({ x: x + (Math.random() - 0.5) * 0.4, y: y + 0.5 + Math.random() * 0.8, z: z + (Math.random() - 0.5) * 0.4, life: 0.35, size: 0.55, size1: 0.1, alpha: 0.85, color, shape: 2 });
+      puff(x + (Math.random() - 0.5) * 0.4, y + 0.5 + Math.random() * 0.8, z + (Math.random() - 0.5) * 0.4, 0, 0, 0, 0.35, 0.55, 0.1, 0.85, color, 2);
     },
     splash(x, y, z, kind = 0) {
       // kind 0 water, 1 lava, 2 cloud

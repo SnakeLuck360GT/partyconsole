@@ -6,8 +6,8 @@ export const TYPES = {
   blue: { color: 0x1f74ff, rim: 0xd8ecff, label: 'Blue space', icon: '+' },
   red: { color: 0xff2a3c, rim: 0xffe0e0, label: 'Red space', icon: '−' },
   event: { color: 0x1fb85a, rim: 0xe1ffe9, label: 'Happening', icon: '?' },
-  shop: { color: 0xff9500, rim: 0xfff0d6, label: 'Item Shop', icon: '🛍' },
-  duel: { color: 0x8a3dff, rim: 0xefe3ff, label: 'Duel', icon: '⚔' },
+  shop: { color: 0xff9500, rim: 0xfff0d6, label: 'Item Shop', icon: '$' },
+  duel: { color: 0x8a3dff, rim: 0xefe3ff, label: 'Duel', icon: 'VS' },
 };
 
 // Type codes used in the layout strings.

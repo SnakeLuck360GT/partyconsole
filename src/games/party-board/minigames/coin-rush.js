@@ -9,9 +9,9 @@ const R = 8.5;
 export default {
   id: 'coin-rush',
   name: 'Coin Rush',
-  instructions: 'Coins are raining! Run to grab them (⭐ = 3). Dodge the 💣 bombs: they stun you and make you drop coins.',
+  instructions: 'Coins are raining! Run to grab them. Stars are worth 3. Dodge the bombs: they stun you and knock coins out of your pockets.',
   mode: 'ffa',
-  minPlayers: 2,
+  minPlayers: 1,
   controls: { stick: 'analog', buttons: [{ id: 'a', label: 'DASH' }], hint: 'Move · <b>A</b> to dash' },
   duration: 40,
 

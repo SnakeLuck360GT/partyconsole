@@ -7,10 +7,10 @@ import { BOARDS, buildBoard, TYPES } from './board-data.js';
 import { buildWorld } from './world.js';
 import { model, rig } from './models.js';
 import { createPiece, createDie, createCounter, createParticles, createCameraRig, PIECE_H } from './fx.js';
-import { createHud, chip, controlsDiagram, COIN } from './hud.js';
+import { createHud, chip, controlsDiagram, portrait, COIN, STAR } from './hud.js';
+import { createIconRenderer, goldify } from './icons.js';
 import { DEBUG, makeRng, makeRuntime, ordinal } from './util.js';
 import { minigames as registered } from './minigames/index.js';
-import placeholderMinigame from './minigames/_placeholder-mash.js';
 
 // Same monster roster as the minigames use (player.index % 8), so players keep their character everywhere.
 const ROSTER = ['dino', 'frog', 'yeti', 'cactoro', 'blue-demon', 'alien', 'mushroom-king', 'orc'];
@@ -19,12 +19,13 @@ const MAX_PIECES = 8;
 const START_COINS = 10;
 const STAR_PRICE = 20;
 const MG_REWARDS = [10, 5, 3, 2, 1, 1, 1, 1];
+const LENGTHS = [{ turns: 5, label: 'Quick' }, { turns: 10, label: 'Standard' }, { turns: 15, label: 'Long' }];
 const ITEMS = {
-  double: { id: 'double', name: 'Double Dice', emoji: '🎲', price: 6, desc: 'Roll two dice blocks this turn' },
-  steal: { id: 'steal', name: 'Thief Glove', emoji: '🧤', price: 8, desc: 'Steal 5–10 coins from a rival' },
-  warp: { id: 'warp', name: 'Golden Warp', emoji: '🌀', price: 14, desc: 'Warp right next to the Star' },
+  double: { id: 'double', name: 'Double Dice', model: 'props/cube-question.glb', price: 6, desc: 'Hit two dice blocks this turn' },
+  steal: { id: 'steal', name: 'Coin Slingshot', model: 'props/minigame/slingshot-yellow.glb', price: 8, desc: 'Steal 5–10 coins from a rival' },
+  warp: { id: 'warp', name: 'Star Warp', model: 'props/minigame/lightning.glb', price: 14, desc: 'Zap right next to the Star' },
 };
-const ARROWS = ['➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️', '⬆️', '↗️'];
+const ARROWS = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'];
 
 export default async function start(ctx) {
   const stage = createStage(ctx.container, { shadows: true, shadowArea: 48, fov: 45, envIntensity: 0.55 });
@@ -43,7 +44,22 @@ export default async function start(ctx) {
   const cam = createCameraRig(camera);
   const origRender = stage.renderer.render;
   const hud = createHud(ctx.container);
-  hud.setBoard(`${boardDef.emoji} ${boardDef.name}`);
+
+  // Rendered art for the 2D UI (TV and phones): star, coin, item icons; portraits are made per piece.
+  const icons = createIconRenderer(stage);
+  const ART = { star: '', coin: '', items: {} };
+  {
+    const gold = (m) => goldify(m);
+    const [star, coin, ...items] = await Promise.all([
+      icons.prop(ctx.sharedAsset('props/star.glb'), 96, { spin: 0.25, recolor: gold }),
+      icons.prop(ctx.sharedAsset('props/coin.glb'), 96, { spin: 0.45, recolor: gold }),
+      ...Object.values(ITEMS).map((it) => icons.prop(ctx.sharedAsset(it.model), 96, { spin: 0.6 })),
+    ]);
+    Object.assign(ART, { star, coin });
+    Object.keys(ITEMS).forEach((id, i) => { ART.items[id] = items[i]; });
+    hud.setArt(ART);
+  }
+  const itemIcon = (id, h = '1.1em') => (ART.items[id] ? `<img src="${ART.items[id]}" alt="" style="height:${h};vertical-align:-.25em">` : '');
 
   let rt = makeRuntime(DEBUG.fast);
   let rng = makeRng(DEBUG.seed ?? undefined);
@@ -53,6 +69,7 @@ export default async function start(ctx) {
   const extras = new Set(); // per-frame updaters (dice, counters, temp models)
   const phone = new Map(); // pid -> current phone state
   const asks = new Map(); // token -> { pids, done }
+  const artSent = new Map(); // pid -> portrait last sent
   let tokenSeq = 0;
   let setupResolve = null;
   let readyHandler = null;
@@ -72,7 +89,7 @@ export default async function start(ctx) {
     particles.update(dt);
     if (G) for (const p of G.pieces) p.obj?.update(dt);
     for (const fn of extras) fn(dt, t);
-    cam.update(dt);
+    cam.update(dt * rt.speed);
   });
 
   // ------------------------------------------------------------------ helpers
@@ -81,7 +98,10 @@ export default async function start(ctx) {
   const connected = (pid) => !!ctx.player(pid)?.connected;
   const pieceOf = (pid) => G?.pieces.find((p) => p.members.includes(pid)) || null;
   const pieceName = (p) => (p.members.length > 1 ? `Team ${ROSTER_NAMES[p.char % ROSTER_NAMES.length]}` : playerName(p.members[0]));
-  const isFrenzy = () => G && G.maxTurns >= 5 && G.turn > G.maxTurns - 5;
+  const frenzyLen = () => (!G ? 0 : G.maxTurns >= 15 ? 5 : G.maxTurns >= 10 ? 3 : G.maxTurns >= 5 ? 2 : 0);
+  const isFrenzy = () => G && frenzyLen() > 0 && G.turn > G.maxTurns - frenzyLen();
+  const ptr = (p, cls = 'pt') => portrait(p.portrait, p.color, cls);
+  const log = (s) => { if (G) G.log.push(s); };
 
   function ranks() {
     const sorted = [...G.pieces].sort((a, b) => b.stars - a.stars || b.coins - a.coins);
@@ -97,26 +117,38 @@ export default async function start(ctx) {
     if (!G) return;
     const r = ranks();
     hud.renderCards(G.pieces.map((p) => ({
-      idx: p.idx, name: pieceName(p), avatar: ctx.player(p.members[0])?.avatar || '🙂', color: p.color, coins: p.coins, shownCoins: p.shownCoins,
-      stars: p.stars, items: p.items.map((i) => ITEMS[i]), members: p.members.length, rank: r.get(p.idx), allAway: !p.members.some(connected),
+      idx: p.idx, name: pieceName(p), portrait: p.portrait, color: p.color, coins: p.coins, shownCoins: p.shownCoins,
+      stars: p.stars, items: p.items.map((id) => ({ id, icon: ART.items[id] })), members: p.members.length, rank: r.get(p.idx), allAway: !p.members.some(connected),
     })), G.cur ?? -1);
     hud.setTurn(G.turn, G.maxTurns);
   }
 
   function statusFor(pid) {
+    if (!G.pieces.length) return null;
     const p = pieceOf(pid);
     if (!p) return { pending: true };
     const r = ranks();
     return {
-      coins: p.coins, stars: p.stars, rank: r.get(p.idx), of: G.pieces.length, items: p.items.map((i) => ITEMS[i].emoji),
+      coins: p.coins, stars: p.stars, rank: r.get(p.idx), of: G.pieces.length, items: [...p.items],
       piece: pieceName(p), color: p.color, team: p.members.length > 1 ? p.members.map(playerName) : null,
       turn: G.turn, maxTurns: G.maxTurns, frenzy: isFrenzy(),
     };
   }
 
+  /** Icons + this player's portrait go to the phone once (and again if the portrait changes). */
+  function sendArt(pid, force = false) {
+    const pt = pieceOf(pid)?.portrait || '';
+    if (!force && artSent.get(pid) === pt) return;
+    artSent.set(pid, pt);
+    ctx.send(pid, { type: 'art', star: ART.star, coin: ART.coin, items: ART.items, portrait: pt });
+  }
+
   function sendState(pid) {
     const s = phone.get(pid) || { view: 'wait', text: 'Get ready to party!' };
-    ctx.send(pid, { type: 'state', s: { ...s, me: G ? statusFor(pid) : null, admin: pid === ctx.adminId } });
+    const out = { ...s, me: G ? statusFor(pid) : null, admin: pid === ctx.adminId };
+    if (s.deadline) { out.left = Math.max(0, s.deadline - Date.now()); out.total = s.total; delete out.deadline; }
+    sendArt(pid);
+    ctx.send(pid, { type: 'state', s: out });
   }
   function setPhone(pid, s) { phone.set(pid, s); sendState(pid); }
   function allPids() { return ctx.allPlayers().map((p) => p.id); }
@@ -124,18 +156,19 @@ export default async function start(ctx) {
     for (const pid of allPids()) if (!except.includes(pid)) setPhone(pid, { view: 'wait', text });
   }
   function refreshPhones(pids = allPids()) { pids.forEach((pid) => { if (connected(pid)) sendState(pid); }); }
-  function vibrate(pid, ms) { ctx.send(pid, { type: 'vibrate', ms }); }
+  function vibrate(pid, pattern) { if (pid) ctx.vibrate(pid, pattern); }
 
   /** Ask one player's phone something. Resolves with their answer, or fallback after a timeout. */
   function ask(pid, s, { timeout = 25000, auto = 2500, fallback = {} } = {}) {
     const token = ++tokenSeq;
+    const limit = timeout / rt.speed;
     return new Promise((resolve) => {
       const started = Date.now();
       let awayAt = null;
       let stop = () => {};
       const done = (v) => { stop(); asks.delete(token); resolve(v); };
       asks.set(token, { pids: pid ? [pid] : [], done });
-      if (pid) setPhone(pid, { ...s, token });
+      if (pid) setPhone(pid, { ...s, token, deadline: started + limit, total: limit });
       stop = rt.interval(() => {
         const fb = typeof fallback === 'function' ? fallback : () => fallback;
         if (!pid || !connected(pid)) {
@@ -143,7 +176,7 @@ export default async function start(ctx) {
           if (Date.now() - awayAt > auto / rt.speed) done({ ...fb(), auto: true });
         } else {
           awayAt = null;
-          if (Date.now() - started > timeout / rt.speed) done({ ...fb(), auto: true });
+          if (Date.now() - started > limit) done({ ...fb(), auto: true });
         }
       }, 150);
     });
@@ -174,7 +207,7 @@ export default async function start(ctx) {
     p.stats.maxCoins = Math.max(p.stats.maxCoins, p.coins);
     const sp = screenPos(headPos(p));
     if (actual === 0) { hud.popup(sp.x, sp.y, '±0', '#ffffff'); refreshHud(); return; }
-    hud.popup(sp.x, sp.y, `${actual > 0 ? '+' : '−'}${Math.abs(actual)}<i class="ci"></i>`, actual > 0 ? '#ffd23f' : '#ff5a6e');
+    hud.popup(sp.x, sp.y, `${actual > 0 ? '+' : '−'}${Math.abs(actual)}${COIN}`, actual > 0 ? '#ffd23f' : '#ff5a6e');
     if (actual > 0) {
       sfx.play('coin');
       particles.coinBurst(headPos(p), Math.min(actual, 10));
@@ -227,8 +260,7 @@ export default async function start(ctx) {
 
   function relocateStar({ avoid = null } = {}) {
     const cands = board.starCandidates.filter((id) => id !== world.starSpace && (!avoid || G.pieces.every((p) => p.space !== id)));
-    const id = rng.pick(cands.length ? cands : board.starCandidates);
-    return id;
+    return rng.pick(cands.length ? cands : board.starCandidates);
   }
   async function placeStar(id, { show = true } = {}) {
     world.setStar(id);
@@ -243,13 +275,13 @@ export default async function start(ctx) {
     await rt.tween(0.8, (k) => { sm.position.y = 14 * (1 - k); }, (t) => 1 - (1 - t) ** 3);
     particles.sparkle(pos.clone().add(new THREE.Vector3(0, 2, 0)), 14);
     sfx.play('powerup');
-    hud.caption('⭐ The <b>Star</b> has landed here!', 2000 / rt.speed);
+    hud.caption(`The ${STAR} <b>Star</b> has landed here!`, 2000 / rt.speed);
     await W(1600);
   }
 
   // ------------------------------------------------------------------ game setup
   function newState() {
-    return { phase: 'setup', turn: 0, maxTurns: 10, pieces: [], order: [], pending: [], cur: null, starSpace: -1, mgBag: [], lastMg: null };
+    return { phase: 'setup', turn: 0, maxTurns: 10, pieces: [], order: [], pending: [], cur: null, starSpace: -1, mgBag: [], lastMg: null, mgCount: 0, log: [] };
   }
 
   async function makePiece(members) {
@@ -261,9 +293,14 @@ export default async function start(ctx) {
     const p = {
       idx, members: [...members], char, color: lead?.color || '#ffffff', colorHex: lead?.colorHex ?? 0xffffff,
       coins: START_COINS, stars: 0, items: [], space: 0, turnCount: 0, shownCoins: null,
-      stats: { mg: 0, maxCoins: START_COINS, events: 0 }, obj: null,
+      stats: { mg: 0, maxCoins: START_COINS, events: 0 }, obj: null, portrait: '',
     };
-    p.obj = await createPiece(rt, scene, { url: charUrl(char), name: '', color: p.color, colorHex: p.colorHex });
+    const [obj, pt] = await Promise.all([
+      createPiece(rt, scene, { url: charUrl(char), name: '', color: p.color, colorHex: p.colorHex }),
+      icons.portrait(charUrl(char), p.colorHex),
+    ]);
+    p.obj = obj;
+    p.portrait = pt;
     p.obj.setLabel(pieceName(p));
     G.pieces.push(p);
     return p;
@@ -276,6 +313,7 @@ export default async function start(ctx) {
     refreshHud();
     setPhone(pid, { view: 'wait', text: `You joined <b>${escapeHtml(pieceName(target))}</b>! Teammates take turns rolling.` });
     refreshPhones(target.members);
+    log('join:team');
   }
 
   async function addPending() {
@@ -288,35 +326,39 @@ export default async function start(ctx) {
         p.obj.root.position.copy(world.spacePos(0));
         G.order.push(p.idx);
         sfx.play('join');
-        hud.caption(`👋 <b>${escapeHtml(pieceName(p))}</b> hopped onto the board!`, 2200);
+        hud.caption(`<b>${escapeHtml(pieceName(p))}</b> hopped onto the board!`, 2200);
+        setPhone(pid, { view: 'wait', text: 'You\'re on the board! Your turn comes after the others.' });
+        log('join:piece');
       } else addToTeam(pid);
     }
     arrange(null, false);
     refreshHud();
   }
 
+  const minutes = (turns, n) => Math.max(5, Math.round((turns * (Math.min(n, MAX_PIECES) * 0.4 + 1.7)) / 5) * 5);
+
   function setupSheet() {
-    const types = [['blue', '+3 coins'], ['red', '−3 coins'], ['event', 'Happening!'], ['shop', 'Buy items'], ['duel', 'Duel a rival']];
-    return `<div class="pb-tag">${boardDef.emoji} ${escapeHtml(boardDef.name)}</div>
-      <h1>🎲 Party Board</h1>
-      <h2>Roll, race around the island and collect the most <b>⭐ Stars</b>!</h2>
-      <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin:14px 0">
-        ${types.map(([t, d]) => `<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:clamp(14px,1.3vw,22px)"><span style="width:34px;height:34px;border-radius:50%;background:#${TYPES[t].color.toString(16).padStart(6, '0')};border:3px solid #fff;box-shadow:0 2px 4px #0003;display:grid;place-items:center;color:#fff;font-weight:700">${TYPES[t].icon}</span>${d}</div>`).join('')}
-        <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:clamp(14px,1.3vw,22px)"><span style="font-size:30px">⭐</span>Star: 20 coins</div>
+    const types = [['blue', '+3 coins'], ['red', '−3 coins'], ['event', 'Happening'], ['shop', 'Item shop'], ['duel', 'Duel']];
+    return `<h1>Party Board</h1>
+      <h2>Race around ${escapeHtml(boardDef.name)} and collect the most Stars</h2>
+      <div class="pb-legend">
+        ${types.map(([t, d]) => `<div><i style="background:#${TYPES[t].color.toString(16).padStart(6, '0')}">${{ blue: '+', red: '−', event: '?', shop: '$', duel: 'VS' }[t]}</i>${d}</div>`).join('')}
+        <div>${STAR}Star: ${STAR_PRICE} coins</div>
       </div>
-      <p>After every round there's a <b>minigame</b> for coins. Most stars wins — coins break ties.</p>
-      <p style="color:#5a6390" class="pb-setup-wait"></p>`;
+      <p>A minigame after every round. Most stars wins, coins break ties.</p>
+      <p style="color:var(--sub)" class="pb-setup-wait"></p>`;
   }
 
   function refreshSetup() {
     if (!G || G.phase !== 'setup') return;
     const admin = ctx.player(ctx.adminId);
+    const n = ctx.players().length;
     for (const p of ctx.players()) {
-      if (p.id === ctx.adminId) setPhone(p.id, { view: 'setup', turns: [10, 15, 20], players: ctx.players().length });
+      if (p.id === ctx.adminId) setPhone(p.id, { view: 'setup', lengths: LENGTHS.map((l) => ({ ...l, min: minutes(l.turns, n) })), players: n });
       else setPhone(p.id, { view: 'wait', text: `${escapeHtml(admin?.name || 'The host')} is picking the game length…` });
     }
     const el = hud.root.querySelector('.pb-setup-wait');
-    if (el) el.innerHTML = `👑 <b>${escapeHtml(admin?.name || 'Host')}</b> picks the number of turns on their phone`;
+    if (el) el.innerHTML = `<b>${escapeHtml(admin?.name || 'The host')}</b> picks the game length on their phone`;
   }
 
   async function intro() {
@@ -333,14 +375,12 @@ export default async function start(ctx) {
       camera.position.set(c.x + Math.sin(a) * r, 34 - k * 6, c.z + Math.cos(a) * r);
       camera.lookAt(c.x, -2 + k * 2, c.z);
     }, (t) => t);
-    cam.set(c, { dist: 60, pitch: 0.9, yaw: 0.6 - 0.6, snap: false });
-    // sync rig to current camera so the hand-off is smooth
+    cam.syncFrom(new THREE.Vector3(c.x, 0, c.z));
     cam.set(world.center, { dist: 60, pitch: 0.92, yaw: 0, stiff: 1.5 });
-    cam.manual(false);
-    await hud.banner(`Welcome to<br>${boardDef.emoji} ${escapeHtml(boardDef.name)}!`, 1700, rt.speed);
+    await hud.banner(`Welcome to<br>${escapeHtml(boardDef.name)}!`, 1700, rt.speed);
     cam.set(world.spacePos(0), { dist: 13, pitch: 0.55, yaw: 0, stiff: 2 });
     for (const p of G.pieces) p.obj.anim.play('wave');
-    hud.caption(`${n} ${n === 1 ? 'piece' : 'pieces'} at the start line${G.pieces.some((p) => p.members.length > 1) ? ' — big crowd, so players share pieces in teams!' : '!'}`, 2400 / rt.speed);
+    hud.caption(`${n} ${n === 1 ? 'piece' : 'pieces'} at the start line${G.pieces.some((p) => p.members.length > 1) ? '. Big crowd, so players share pieces in teams!' : '!'}`, 2400 / rt.speed);
     await W(2200);
     for (const p of G.pieces) p.obj.anim.play('idle');
     await placeStar(relocateStar({ avoid: true }));
@@ -368,14 +408,14 @@ export default async function start(ctx) {
       el.querySelector('.num').textContent = values[i];
       el.classList.add('done');
       sfx.play('hit');
-      if (pid) { setPhone(pid, { view: 'wait', text: `You rolled <b>${values[i]}</b>!` }); vibrate(pid, 40); }
+      if (pid) { setPhone(pid, { view: 'wait', text: `You rolled <b>${values[i]}</b>!` }); vibrate(pid, 'tap'); }
     }));
     stopSpin();
     G.order = list.map((p, i) => ({ idx: p.idx, v: values[i] })).sort((a, b) => b.v - a.v).map((o) => o.idx);
     await W(700);
     m.set(`<h1>Turn order</h1><div class="pb-rows">${G.order.map((idx, k) => {
       const p = G.pieces[idx];
-      return `<div class="pb-row" style="--c:${p.color};animation-delay:${k * 0.12}s"><span class="pl">${k + 1}.</span><span class="nm">${ctx.player(p.members[0])?.avatar || ''} ${escapeHtml(pieceName(p))}</span></div>`;
+      return `<div class="pb-row" style="--c:${p.color};animation-delay:${k * 0.12}s"><span class="pl">${k + 1}</span>${ptr(p)}<span class="nm">${escapeHtml(pieceName(p))}</span></div>`;
     }).join('')}</div>`);
     sfx.play('powerup');
     await W(2600);
@@ -388,36 +428,37 @@ export default async function start(ctx) {
     const pid = controllerOf(p);
     p.turnCount++;
     refreshHud();
-    cam.set(p.obj.root, { dist: 11.5, pitch: 0.6, yaw: 0, stiff: 2.2 });
+    cam.set(p.obj.root, { dist: 13, pitch: 0.82, yaw: 0, stiff: 2.2 });
     // the active piece steps to the centre of its space
     p.obj.moveTo(world.spacePos(p.space), 0.25);
     arrange(p);
     p.obj.face(camera.position.x, camera.position.z);
     const who = pid ? escapeHtml(playerName(pid)) : escapeHtml(pieceName(p));
-    waitAll(`${who} is rolling… 🎲`, pid ? [pid] : []);
-    await hud.banner(`<small>${p.members.length > 1 ? escapeHtml(pieceName(p)) : 'Turn ' + G.turn}</small>${ctx.player(pid ?? p.members[0])?.avatar || ''} ${who}'s turn!`, 1100, rt.speed);
-    if (pid) vibrate(pid, [60, 40, 60]);
+    waitAll(`<b>${who}</b> is rolling…`, pid ? [pid] : []);
+    await hud.banner(`<small>${p.members.length > 1 ? escapeHtml(pieceName(p)) : `Turn ${G.turn}`}</small>${who}'s turn!`, 1100, rt.speed);
+    if (pid) vibrate(pid, 'turn');
 
     const dice = [spawnDie(p, 0)];
     let usedItem = false;
     for (;;) {
-      const items = usedItem ? [] : p.items.map((id, i) => ({ i, ...ITEMS[id] }));
-      const r = await ask(pid, { view: 'roll', title: 'Your turn!', items, dice: dice.length, hint: dice.length > 1 ? 'Double dice!' : '' }, { timeout: 45000, auto: 3500, fallback: { act: 'roll' } });
+      const items = usedItem ? [] : p.items.map((id, i) => ({ i, id, name: ITEMS[id].name }));
+      const r = await ask(pid, { view: 'roll', title: 'Your turn!', items, dice: dice.length, hint: dice.length > 1 ? 'Double dice!' : 'Tap to roll' }, { timeout: 30000, auto: 1500, fallback: { act: 'roll' } });
       if (r.act === 'item' && !usedItem && p.items[r.i] != null) {
         const id = p.items.splice(r.i, 1)[0];
         usedItem = true;
         refreshHud();
         refreshPhones(p.members);
         sfx.play('powerup');
-        hud.caption(`${ITEMS[id].emoji} <b>${escapeHtml(who)}</b> used <b>${ITEMS[id].name}</b>!`, 2200 / rt.speed);
+        hud.caption(`${itemIcon(id)} <b>${who}</b> used the <b>${ITEMS[id].name}</b>!`, 2200 / rt.speed);
         particles.sparkle(headPos(p), 10);
+        log(`item:${id}`);
         if (id === 'double') {
           dice.push(spawnDie(p, 1));
           dice[0].offset = -0.85;
           dice[1].offset = 0.85;
         } else if (id === 'steal') {
           await stealItem(p, pid);
-          cam.set(p.obj.root, { dist: 11.5, pitch: 0.6, yaw: 0 });
+          cam.set(p.obj.root, { dist: 13, pitch: 0.82, yaw: 0 });
         } else if (id === 'warp') {
           dice.forEach((d) => d.kill());
           await warpToStar(p, pid);
@@ -434,12 +475,14 @@ export default async function start(ctx) {
     dice.forEach((d, i) => { d.die.stop(vals[i]); d.die.mesh.scale.setScalar(1.25); });
     sfx.play('hit');
     hud.flash();
+    cam.shake(0.25);
     particles.sparkle(headPos(p).add(new THREE.Vector3(0, 2, 0)), 10, { speed: 4 });
-    if (pid) vibrate(pid, 50);
+    vibrate(pid, 'hit');
     const total = vals.reduce((a, b) => a + b, 0);
-    if (pid) setPhone(pid, { view: 'wait', text: `You rolled <b style="font-size:1.6em">${total}</b>!` });
+    log(`roll:${total}`);
+    if (pid) setPhone(pid, { view: 'rolled', n: total });
     await W(dice.length > 1 ? 1300 : 900);
-    if (dice.length > 1) hud.caption(`🎲 ${vals.join(' + ')} = <b>${total}</b>`, 1600 / rt.speed);
+    if (dice.length > 1) hud.caption(`${vals.join(' + ')} = <b>${total}</b>`, 1600 / rt.speed);
     await rt.tween(0.25, (k) => dice.forEach((d) => d.die.mesh.scale.setScalar(1.25 + k * 0.6)));
     dice.forEach((d) => d.kill());
     p.obj.anim.play('idle');
@@ -458,7 +501,7 @@ export default async function start(ctx) {
 
   function spawnDie(p, k) {
     const die = createDie(scene, p.color);
-    const entry = { die, offset: 0 };
+    const entry = { die, offset: 0, k };
     const fn = (dt) => {
       die.group.position.copy(p.obj.root.position).add(new THREE.Vector3(entry.offset, PIECE_H + 1.9, 0));
       die.update(dt, camera);
@@ -503,7 +546,7 @@ export default async function start(ctx) {
         if (next === G.starSpace) {
           p.obj.anim.play('idle');
           await starStop(p, pid, left);
-          cam.set(p.obj.root, { dist: 11.5, pitch: 0.6, yaw: 0 });
+          cam.set(p.obj.root, { dist: 13, pitch: 0.82, yaw: 0 });
         }
       }
     } finally {
@@ -523,35 +566,39 @@ export default async function start(ctx) {
       const there = screenPos(world.spacePos(n));
       const a = Math.atan2(there.y - here.y, there.x - here.x);
       const sector = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
-      return { label: `${ARROWS[sector]} ${s.junctionNames?.[i] || `Path ${i + 1}`}`, color: ['#ffb300', '#2fb6ff', '#ff5aa5'][i % 3] };
+      return { label: `${ARROWS[sector]} ${s.junctionNames?.[i] || `Path ${i + 1}`}`, color: ['#e08e00', '#1f8be0', '#e0478f'][i % 3] };
     });
     hud.caption(`Which way? <b>${options.map((o) => o.label).join('</b> or <b>')}</b>`, 0);
     const best = s.next.reduce((bi, n, i) => (distToStar(n) < distToStar(s.next[bi]) ? i : bi), 0);
-    const r = await ask(pid, { view: 'choice', title: 'Which way?', sub: `${left} steps left`, options }, { timeout: 25000, auto: 1500, fallback: { i: best } });
+    const r = await ask(pid, { view: 'choice', title: 'Which way?', sub: `${left} step${left === 1 ? '' : 's'} left`, options }, { timeout: 20000, auto: 1200, fallback: { i: best } });
     hud.hideCaption();
     world.hideArrows();
     sfx.play('click');
-    cam.set(p.obj.root, { dist: 11.5, pitch: 0.6, yaw: 0 });
-    if (pid) setPhone(pid, { view: 'wait', text: 'Hop hop hop…' });
-    return s.next[Math.max(0, Math.min(s.next.length - 1, r.i | 0))];
+    cam.set(p.obj.root, { dist: 13, pitch: 0.82, yaw: 0 });
+    if (pid) setPhone(pid, { view: 'wait', text: 'Hop, hop, hop…' });
+    const k = Math.max(0, Math.min(s.next.length - 1, r.i | 0));
+    log(`junction:${k}`);
+    return s.next[k];
   }
 
   async function starStop(p, pid) {
-    cam.set(world.spacePos(p.space), { dist: 11, pitch: 0.5, yaw: 0, stiff: 2.5 });
+    cam.set(world.spacePos(p.space), { dist: 12, pitch: 0.7, yaw: 0, stiff: 2.5 });
     if (p.coins >= STAR_PRICE) {
-      hud.caption(`⭐ Buy a Star for <b>${STAR_PRICE} coins</b>?`, 0);
-      const r = await ask(pid, { view: 'confirm', title: '⭐ Buy a Star?', text: `Trade <b>${STAR_PRICE} <i class="ci"></i></b> for a shiny Star!`, yes: `Buy ⭐ (${STAR_PRICE}<i class="ci"></i>)`, no: 'No thanks' }, { timeout: 25000, auto: 1200, fallback: { yes: true } });
+      hud.caption(`Buy a ${STAR} Star for <b>${STAR_PRICE} coins</b>?`, 0);
+      const r = await ask(pid, { view: 'confirm', title: 'Buy a Star?', icon: 'star', text: `Trade <b>${STAR_PRICE} ${COIN}</b> for a shiny Star!`, yes: `Buy for ${STAR_PRICE}`, no: 'No thanks' }, { timeout: 20000, auto: 1200, fallback: { yes: true } });
       hud.hideCaption();
       if (r.yes) await buyStar(p, pid);
       else { hud.caption('Maybe next time…', 1400 / rt.speed); await W(900); }
     } else {
       p.obj.anim.play('sad');
       sfx.play('wrong');
-      hud.caption(`You need <b>${STAR_PRICE} <i class="ci"></i></b> for a Star… (you have ${p.coins})`, 2000 / rt.speed);
+      hud.caption(`A Star costs <b>${STAR_PRICE} ${COIN}</b>… ${escapeHtml(pieceName(p))} has ${p.coins}`, 2000 / rt.speed);
+      vibrate(pid, 'error');
+      log('star:broke');
       await W(1800);
       p.obj.anim.play('idle');
     }
-    if (pid) setPhone(pid, { view: 'wait', text: 'Hop hop hop…' });
+    if (pid) setPhone(pid, { view: 'wait', text: 'Hop, hop, hop…' });
   }
 
   async function buyStar(p, pid) {
@@ -566,18 +613,20 @@ export default async function start(ctx) {
     });
     star.scale.setScalar(1);
     p.stars++;
+    log('star:buy');
     world.setStar(-1);
     hud.flash();
+    cam.shake(0.4);
     sfx.play('win');
     p.obj.anim.play('win');
     particles.confetti(p.obj.root.position.clone().add(new THREE.Vector3(0, 2, 0)), 160);
     particles.sparkle(headPos(p), 18, { speed: 6 });
     const sp = screenPos(headPos(p));
-    hud.fly(sp.x, sp.y, p.idx, 1, '⭐', () => refreshHud(), rt.speed);
-    if (pid) vibrate(pid, [80, 60, 80, 60, 200]);
+    hud.fly(sp.x, sp.y, p.idx, 1, STAR, () => refreshHud(), rt.speed);
+    vibrate(pid, 'win');
     refreshHud();
     refreshPhones(p.members);
-    await hud.banner(`⭐ STAR GET! ⭐<small>${escapeHtml(pieceName(p))} now has ${p.stars} ${p.stars === 1 ? 'star' : 'stars'}</small>`, 2200, rt.speed);
+    await hud.banner(`STAR GET!<small>${escapeHtml(pieceName(p))} now has ${p.stars} ${p.stars === 1 ? 'star' : 'stars'}</small>`, 2200, rt.speed);
     p.obj.anim.play('idle');
     await placeStar(relocateStar());
   }
@@ -590,7 +639,7 @@ export default async function start(ctx) {
     await rt.tween(0.35, (k) => p.obj.root.scale.setScalar(1 - k * 0.95));
     p.space = before;
     p.obj.root.position.copy(world.spacePos(before));
-    cam.set(p.obj.root, { dist: 11.5, pitch: 0.6, yaw: 0, snap: true });
+    cam.set(p.obj.root, { dist: 13, pitch: 0.82, yaw: 0, snap: true });
     await W(300);
     await rt.tween(0.45, (k) => p.obj.root.scale.setScalar(0.05 + k * 0.95), (t) => 1 + 2.7 * (t - 1) ** 3 + 1.7 * (t - 1) ** 2);
     particles.sparkle(headPos(p), 14);
@@ -602,23 +651,24 @@ export default async function start(ctx) {
 
   async function pickRival(p, pid, title, prefer = 'rich') {
     const others = G.pieces.filter((o) => o !== p);
-    const options = others.map((o) => ({ label: `${ctx.player(o.members[0])?.avatar || ''} ${escapeHtml(pieceName(o))}`, sub: `⭐${o.stars} · <i class="ci"></i>${o.coins}`, color: o.color }));
+    const options = others.map((o) => ({ label: escapeHtml(pieceName(o)), sub: `${o.stars} stars · ${o.coins} coins`, color: o.color }));
     const best = others.reduce((bi, o, i) => ((prefer === 'rich' ? o.coins > others[bi].coins : o.stars > others[bi].stars) ? i : bi), 0);
-    const r = await ask(pid, { view: 'choice', title, options }, { timeout: 25000, auto: 1500, fallback: { i: best } });
+    const r = await ask(pid, { view: 'choice', title, options }, { timeout: 20000, auto: 1500, fallback: { i: best } });
     return others[Math.max(0, Math.min(others.length - 1, r.i | 0))];
   }
 
   async function stealItem(p, pid) {
     if (G.pieces.length < 2) return;
-    const victim = await pickRival(p, pid, '🧤 Steal from…');
+    const victim = await pickRival(p, pid, 'Steal from…');
     const amt = Math.min(victim.coins, rng.int(5, 10));
-    cam.set(victim.obj.root, { dist: 12, pitch: 0.6 });
+    cam.set(victim.obj.root, { dist: 13, pitch: 0.8 });
     await W(700);
     victim.obj.anim.play('hit', { once: true });
     cam.shake(0.4);
+    victim.members.forEach((m) => vibrate(m, 'bump'));
     await changeCoins(victim, -amt, { wait: false });
     await W(500);
-    cam.set(p.obj.root, { dist: 12, pitch: 0.6 });
+    cam.set(p.obj.root, { dist: 13, pitch: 0.8 });
     await W(500);
     await changeCoins(p, amt);
   }
@@ -628,17 +678,20 @@ export default async function start(ctx) {
     const s = spaces[p.space];
     const frenzy = isFrenzy();
     world.bounceSpace(p.space);
-    cam.set(p.obj.root, { dist: 11, pitch: 0.55, yaw: 0 });
+    cam.set(p.obj.root, { dist: 12.5, pitch: 0.78, yaw: 0 });
+    log(`land:${s.type}`);
     if (s.type === 'blue') {
       const v = frenzy ? 6 : 3;
       p.obj.anim.play('yes');
-      hud.caption(`🔵 Blue space! <b>+${v} coins</b>`, 1800 / rt.speed);
+      hud.caption(`Blue space! <b>+${v} coins</b>`, 1800 / rt.speed);
+      vibrate(pid, 'success');
       await changeCoins(p, v);
     } else if (s.type === 'red') {
       const v = frenzy ? 5 : 3;
       p.obj.anim.play('sad');
       cam.shake(0.35);
-      hud.caption(`🔴 Red space… <b>−${v} coins</b>`, 1800 / rt.speed);
+      hud.caption(`Red space… <b>−${v} coins</b>`, 1800 / rt.speed);
+      vibrate(pid, 'lose');
       await changeCoins(p, -v);
     } else if (s.type === 'event') {
       p.stats.events++;
@@ -667,25 +720,26 @@ export default async function start(ctx) {
     const others = G.pieces.filter((o) => o !== p);
     const leader = [...G.pieces].sort((a, b) => b.stars - a.stars || b.coins - a.coins)[0];
     const events = [
-      { id: 'shower', w: 3, name: '<i class="ci"></i> Coin Shower' },
-      { id: 'chest', w: 2.2, name: '🎁 Lucky Chest' },
-      { id: 'swap', w: others.length ? 1.6 : 0, name: '🔄 Coin Swap' },
-      { id: 'warp', w: others.length ? 1.6 : 0, name: '🌀 Place Swap' },
-      { id: 'bandit', w: 1.4, name: '🦹 Star Bandit' },
-      { id: 'starmove', w: 1, name: '✨ Star Shuffle' },
-      { id: 'robin', w: others.length ? 1.4 : 0, name: '🏹 Robin Hood' },
+      { id: 'shower', w: 3, name: 'Coin Shower' },
+      { id: 'chest', w: 2.2, name: 'Lucky Chest' },
+      { id: 'swap', w: others.length ? 1.6 : 0, name: 'Coin Swap' },
+      { id: 'warp', w: others.length ? 1.6 : 0, name: 'Place Swap' },
+      { id: 'bandit', w: 1.4, name: 'Star Bandit' },
+      { id: 'starmove', w: 1, name: 'Star Shuffle' },
+      { id: 'robin', w: others.length ? 1.4 : 0, name: 'Robin Hood' },
     ].filter((e) => e.w > 0);
     const ev = rng.weighted(events);
+    log(`happening:${ev.id}`);
     sfx.play('powerup');
-    if (pid) setPhone(pid, { view: 'wait', text: '❓ Happening!' });
-    const m = hud.modal('<div class="pb-tag">❓ HAPPENING</div><h1>What will happen?</h1>');
+    if (pid) setPhone(pid, { view: 'wait', text: 'Happening! Watch the TV…' });
+    const m = hud.modal('<div class="pb-tag">Happening</div><h1>What will happen?</h1>');
     await rt.guard(hud.roulette(m.el, events.map((e) => e.name), events.indexOf(ev), { speed: rt.speed }));
     await W(700);
     m.close();
     const who = `<b>${escapeHtml(pieceName(p))}</b>`;
     if (ev.id === 'shower') {
       const v = rng.int(6, 10);
-      hud.caption(`<i class="ci"></i> Coins rain from the sky! ${who} gets <b>+${v}</b>`, 2400 / rt.speed);
+      hud.caption(`Coins rain from the sky! ${who} gets <b>+${v}</b>`, 2400 / rt.speed);
       particles.coinRain(p.obj.root.position, 24, 2.5);
       p.obj.anim.play('win');
       await W(900);
@@ -702,19 +756,20 @@ export default async function start(ctx) {
       if (p.items.length < 3) {
         const id = rng.pick(Object.keys(ITEMS));
         p.items.push(id);
-        hud.caption(`🎁 ${who} found a <b>${ITEMS[id].emoji} ${ITEMS[id].name}</b>!`, 2400 / rt.speed);
+        hud.caption(`${who} found a ${itemIcon(id)} <b>${ITEMS[id].name}</b>!`, 2400 / rt.speed);
         refreshHud();
         refreshPhones(p.members);
+        vibrate(pid, 'success');
         await W(1600);
       } else {
-        hud.caption(`🎁 The chest is full of coins! ${who} gets <b>+8</b>`, 2400 / rt.speed);
+        hud.caption(`The chest is full of coins! ${who} gets <b>+8</b>`, 2400 / rt.speed);
         await changeCoins(p, 8);
       }
       await W(500);
       chest.kill();
     } else if (ev.id === 'swap') {
       const o = rng.pick(others);
-      hud.caption(`🔄 ${who} swaps coins with <b>${escapeHtml(pieceName(o))}</b>!`, 2600 / rt.speed);
+      hud.caption(`${who} swaps coins with <b>${escapeHtml(pieceName(o))}</b>!`, 2600 / rt.speed);
       await W(800);
       const a = p.coins;
       const b = o.coins;
@@ -723,14 +778,14 @@ export default async function start(ctx) {
       await changeCoins(o, a - b);
     } else if (ev.id === 'warp') {
       const o = rng.pick(others);
-      hud.caption(`🌀 ${who} trades places with <b>${escapeHtml(pieceName(o))}</b>!`, 2600 / rt.speed);
+      hud.caption(`${who} trades places with <b>${escapeHtml(pieceName(o))}</b>!`, 2600 / rt.speed);
       await W(600);
       sfx.play('whoosh');
       await rt.tween(0.35, (k) => { p.obj.root.scale.setScalar(1 - k * 0.95); o.obj.root.scale.setScalar(1 - k * 0.95); });
       [p.space, o.space] = [o.space, p.space];
       p.obj.root.position.copy(world.spacePos(p.space));
       o.obj.root.position.copy(world.spacePos(o.space));
-      cam.set(p.obj.root, { dist: 11.5, pitch: 0.6, snap: true });
+      cam.set(p.obj.root, { dist: 13, pitch: 0.82, snap: true });
       await rt.tween(0.4, (k) => { p.obj.root.scale.setScalar(0.05 + k * 0.95); o.obj.root.scale.setScalar(0.05 + k * 0.95); });
       particles.sparkle(headPos(p), 12);
       arrange();
@@ -750,15 +805,16 @@ export default async function start(ctx) {
       cam.shake(0.9);
       sfx.play('hit');
       p.obj.anim.play('hit', { once: true });
+      vibrate(pid, 'heavy');
       if (p.stars > 0) {
         p.stars--;
-        hud.caption(`🦹 The Star Bandit stole a <b>⭐ Star</b> from ${who}!`, 2600 / rt.speed);
+        hud.caption(`The Star Bandit stole a ${STAR} <b>Star</b> from ${who}!`, 2600 / rt.speed);
         particles.sparkle(headPos(p), 14);
         refreshHud();
         refreshPhones(p.members);
       } else {
         const v = Math.min(p.coins, 10);
-        hud.caption(`🦹 The Star Bandit found no stars… and swiped <b>${v} coins</b> instead!`, 2600 / rt.speed);
+        hud.caption(`No stars to steal… the Star Bandit swiped <b>${v} coins</b> instead!`, 2600 / rt.speed);
         await changeCoins(p, -v, { wait: false });
       }
       sfx.play('lose');
@@ -770,21 +826,21 @@ export default async function start(ctx) {
       bandit.kill();
       p.obj.anim.play('idle');
     } else if (ev.id === 'starmove') {
-      hud.caption('✨ The Star is on the move!', 2000 / rt.speed);
+      hud.caption(`The ${STAR} Star is on the move!`, 2000 / rt.speed);
       await W(900);
       await placeStar(relocateStar());
-      cam.set(p.obj.root, { dist: 11.5, pitch: 0.6 });
+      cam.set(p.obj.root, { dist: 13, pitch: 0.82 });
     } else if (ev.id === 'robin') {
       if (leader !== p) {
         const v = Math.min(leader.coins, 6);
-        hud.caption(`🏹 Robin Hood! <b>${escapeHtml(pieceName(leader))}</b> (1st place) gives ${who} <b>${v} coins</b>`, 2800 / rt.speed);
+        hud.caption(`Robin Hood! <b>${escapeHtml(pieceName(leader))}</b> (1st place) gives ${who} <b>${v} coins</b>`, 2800 / rt.speed);
         await changeCoins(leader, -v, { wait: false });
         await W(400);
         await changeCoins(p, v);
       } else {
         const poor = [...others].sort((a, b) => a.stars - b.stars || a.coins - b.coins)[0];
         const v = Math.min(p.coins, 6);
-        hud.caption(`🏹 Robin Hood! ${who} is in 1st, so <b>${v} coins</b> go to <b>${escapeHtml(pieceName(poor))}</b>`, 2800 / rt.speed);
+        hud.caption(`Robin Hood! ${who} is in 1st, so <b>${v} coins</b> go to <b>${escapeHtml(pieceName(poor))}</b>`, 2800 / rt.speed);
         await changeCoins(p, -v, { wait: false });
         await W(400);
         await changeCoins(poor, v);
@@ -801,33 +857,36 @@ export default async function start(ctx) {
     sfx.play('join');
     try {
       if (p.items.length >= 3) {
-        hud.caption('🛍️ Welcome! …oh, your bag is full (3 items max).', 2200 / rt.speed);
+        hud.caption('Welcome! …oh, your bag is full (3 items max).', 2200 / rt.speed);
         await W(1800);
         return;
       }
-      const list = Object.values(ITEMS).map((it) => ({ ...it, can: p.coins >= it.price }));
-      hud.caption(`🛍️ Welcome to the <b>Item Shop</b>! You have ${p.coins} <i class="ci"></i>`, 0);
+      const list = Object.values(ITEMS).map((it) => ({ id: it.id, name: it.name, desc: it.desc, price: it.price, can: p.coins >= it.price }));
+      hud.caption(`Welcome to the <b>Item Shop</b>! ${escapeHtml(pieceName(p))} has ${p.coins} ${COIN}`, 0);
       // Auto-buy for absent players: cheapest affordable item if they'd keep 5 coins.
       const autoPick = () => {
         const a = list.filter((it) => p.coins >= it.price + 5).sort((x, y) => x.price - y.price)[0];
         return a ? { buy: a.id } : { leave: true };
       };
-      const r = await ask(pid, { view: 'shop', title: '🛍️ Item Shop', coins: p.coins, items: list, slots: 3 - p.items.length }, { timeout: 30000, auto: 1500, fallback: autoPick });
+      const r = await ask(pid, { view: 'shop', title: 'Item Shop', coins: p.coins, items: list, slots: 3 - p.items.length }, { timeout: 25000, auto: 1500, fallback: autoPick });
       const it = r.buy && ITEMS[r.buy];
       if (it && p.coins >= it.price) {
         keeper.a.play('yes');
         p.items.push(it.id);
-        hud.caption(`${it.emoji} ${escapeHtml(pieceName(p))} bought a <b>${it.name}</b>!`, 2200 / rt.speed);
+        log(`shop:${it.id}`);
+        hud.caption(`${itemIcon(it.id)} ${escapeHtml(pieceName(p))} bought the <b>${it.name}</b>!`, 2200 / rt.speed);
         sfx.play('powerup');
         await changeCoins(p, -it.price);
         refreshHud();
         refreshPhones(p.members);
         await W(800);
       } else {
-        hud.caption('🛍️ Come back any time!', 1500 / rt.speed);
+        log('shop:leave');
+        hud.caption('Come back any time!', 1500 / rt.speed);
         await W(900);
       }
     } finally {
+      hud.hideCaption();
       keeper.kill();
     }
   }
@@ -836,19 +895,20 @@ export default async function start(ctx) {
   async function duel(p, pid) {
     const others = G.pieces.filter((o) => o !== p);
     if (!others.length) {
-      hud.caption('⚔️ No rivals to duel… have <b>5 coins</b> instead!', 2000 / rt.speed);
+      hud.caption('No rivals to duel… have <b>5 coins</b> instead!', 2000 / rt.speed);
       await changeCoins(p, 5);
       return;
     }
-    hud.caption(`⚔️ <b>DUEL!</b> ${escapeHtml(pieceName(p))} picks a rival…`, 0);
-    const o = await pickRival(p, pid, '⚔️ Challenge who?');
+    hud.caption(`<b>DUEL!</b> ${escapeHtml(pieceName(p))} picks a rival…`, 0);
+    const o = await pickRival(p, pid, 'Challenge who?');
     hud.hideCaption();
     const stake = 10;
     const kind = rng.next() < 0.6 ? 'draw' : 'flip';
-    const side = (q, cls = '') => `<div class="side ${cls}" data-i="${q.idx}" style="--c:${q.color}"><div class="big">${ctx.player(q.members[0])?.avatar || '🙂'}</div>${escapeHtml(pieceName(q))}</div>`;
-    const sheet = (msg, win = null) => `<div class="pb-tag">⚔️ DUEL · ${stake} coins at stake</div><h1>${kind === 'draw' ? 'Quick Draw!' : 'Coin Flip!'}</h1>
+    log(`duel:${kind}`);
+    const side = (q, cls = '') => `<div class="side ${cls}" data-i="${q.idx}" style="--c:${q.color}">${ptr(q, 'big')}${escapeHtml(pieceName(q))}</div>`;
+    const sheet = (msg, win = null) => `<div class="pb-tag">Duel · ${stake} coins at stake</div><h1>${kind === 'draw' ? 'Quick Draw!' : 'Coin Flip!'}</h1>
       <div class="pb-vs">${side(p, win === p ? 'win' : '')}<div class="vs">VS</div>${side(o, win === o ? 'win' : '')}</div><p class="pb-duel-msg">${msg}</p>`;
-    const m = hud.modal(sheet(kind === 'draw' ? 'Wait for <b>GO!</b> then tap your phone first. Too early = you lose!' : `${escapeHtml(pieceName(p))} calls it…`));
+    const m = hud.modal(sheet(kind === 'draw' ? 'Wait for <b>GO!</b> then tap your phone first. Too early and you lose!' : `${escapeHtml(pieceName(p))} calls it…`));
     sfx.play('countdown');
     await W(2200);
     let winner = null;
@@ -856,7 +916,7 @@ export default async function start(ctx) {
     else winner = await coinFlip(p, o, pid, m);
     const loser = winner === p ? o : winner === o ? p : null;
     if (winner) {
-      m.set(sheet(`🏆 <b>${escapeHtml(pieceName(winner))}</b> wins the duel!`, winner));
+      m.set(sheet(`<b>${escapeHtml(pieceName(winner))}</b> wins the duel!`, winner));
       sfx.play('win');
       await W(1600);
       m.close();
@@ -870,7 +930,7 @@ export default async function start(ctx) {
       winner.obj.anim.play('idle');
       loser.obj.anim.play('idle');
     } else {
-      m.set(sheet('🤝 Nobody wins — a draw!'));
+      m.set(sheet('Nobody wins. It\'s a draw!'));
       await W(1500);
       m.close();
     }
@@ -892,7 +952,7 @@ export default async function start(ctx) {
       if (!side || result) return;
       if (!go) {
         foul.add(side);
-        vibrate(pid, 200);
+        vibrate(pid, 'error');
         if (foul.size === 2) { result = 'draw'; resolve(); } else { result = side === a ? b : a; resolve(); }
         return;
       }
@@ -907,36 +967,42 @@ export default async function start(ctx) {
       hud.flash();
       const msg = m.el.querySelector('.pb-duel-msg');
       if (msg) msg.innerHTML = '<span class="pb-big" style="color:#ff3d6b">GO!</span>';
-      for (const pid of all) { setPhone(pid, { view: 'duel', phase: 'go' }); vibrate(pid, 60); }
+      for (const pid of all) { setPhone(pid, { view: 'duel', phase: 'go' }); vibrate(pid, 'heavy'); }
       // Absent sides get a CPU reflex so the duel still resolves.
       for (const side of [a, b]) {
         if (!side.members.some(connected)) rt.timeout(() => { if (!result) { result = side; resolve(); } }, 380 + rng.next() * 400);
       }
       rt.timeout(() => { if (!result) { result = 'draw'; resolve(); } }, 6000);
     }, delay / Math.min(rt.speed, 2));
+    // Nobody can stall a duel: hard cap.
+    rt.timeout(() => { if (!result) { result = 'draw'; resolve(); } }, 15000);
     await rt.guard(finished);
     duelHandler = null;
     if (foul.size === 1) {
       const msg = m.el.querySelector('.pb-duel-msg');
-      if (msg) msg.innerHTML = `😱 <b>${escapeHtml(pieceName([...foul][0]))}</b> tapped too early!`;
+      if (msg) msg.innerHTML = `<b>${escapeHtml(pieceName([...foul][0]))}</b> tapped too early!`;
       sfx.play('wrong');
       await W(1300);
     }
-    for (const pid of all) setPhone(pid, { view: 'wait', text: result === 'draw' ? 'Draw!' : (result === a ? pidsA : pidsB).includes(pid) ? '🏆 You won the duel!' : '😵 You lost the duel…' });
+    for (const pid of all) {
+      const won = result !== 'draw' && (result === a ? pidsA : pidsB).includes(pid);
+      setPhone(pid, { view: 'wait', text: result === 'draw' ? 'Draw!' : won ? 'You won the duel!' : 'You lost the duel…' });
+      vibrate(pid, result === 'draw' ? 'tap' : won ? 'win' : 'lose');
+    }
     return result === 'draw' ? null : result;
   }
 
   async function coinFlip(a, b, pid, m) {
-    const r = await ask(pid, { view: 'choice', title: 'Call it!', options: [{ label: '👑 Heads', color: '#ffb300' }, { label: '🌙 Tails', color: '#5c6cff' }] }, { timeout: 20000, auto: 1200, fallback: () => ({ i: rng.int(0, 1) }) });
+    const r = await ask(pid, { view: 'choice', title: 'Call it!', options: [{ label: 'Heads', color: '#ffb300' }, { label: 'Tails', color: '#5c6cff' }] }, { timeout: 15000, auto: 1200, fallback: () => ({ i: rng.int(0, 1) }) });
     const call = r.i === 1 ? 1 : 0;
     const res = rng.int(0, 1);
     const msg = m.el.querySelector('.pb-duel-msg');
-    if (msg) msg.innerHTML = `Called <b>${call ? '🌙 Tails' : '👑 Heads'}</b>… <span class="pb-big pb-coin" style="display:inline-block"><i class="ci"></i></span>`;
+    if (msg) msg.innerHTML = `Called <b>${call ? 'Tails' : 'Heads'}</b>… <span class="pb-big pb-coin" style="display:inline-block">${COIN}</span>`;
     const coin = m.el.querySelector('.pb-coin');
     coin?.animate([{ transform: 'rotateY(0) translateY(0)' }, { transform: 'rotateY(1800deg) translateY(-60px)' }, { transform: 'rotateY(3600deg) translateY(0)' }], { duration: 1800 / rt.speed, easing: 'ease-out' });
     sfx.play('whoosh');
     await W(1900);
-    if (msg) msg.innerHTML = `It's <b>${res ? '🌙 Tails' : '👑 Heads'}</b>!`;
+    if (msg) msg.innerHTML = `It's <b>${res ? 'Tails' : 'Heads'}</b>!`;
     sfx.play(res === call ? 'correct' : 'wrong');
     await W(1200);
     return res === call ? a : b;
@@ -956,19 +1022,20 @@ export default async function start(ctx) {
   }
 
   function chooseMinigame(n) {
-    let pool = registered.filter((mg) => (mg.minPlayers || 1) <= Math.max(1, n));
+    const pool = registered.filter((mg) => (mg.minPlayers || 1) <= Math.max(1, n));
     if (DEBUG.minigame) {
-      const forced = [...registered, placeholderMinigame].find((mg) => mg.id === DEBUG.minigame);
-      if (forced) return { mg: forced, pool: [forced] };
+      const ids = DEBUG.minigame.split(',');
+      const forced = registered.find((mg) => mg.id === ids[G.mgCount % ids.length]);
+      if (forced) return { mg: forced, pool: [forced, ...pool.filter((x) => x !== forced)] };
     }
-    if (!pool.length) pool = [placeholderMinigame];
-    if (!G.mgBag.length || !G.mgBag.every((id) => pool.some((mg) => mg.id === id))) {
-      G.mgBag = rng.shuffle(pool.map((mg) => mg.id));
+    const usable = pool.length ? pool : registered;
+    if (!G.mgBag.length || !G.mgBag.every((id) => usable.some((mg) => mg.id === id))) {
+      G.mgBag = rng.shuffle(usable.map((mg) => mg.id));
       if (G.mgBag.length > 1 && G.mgBag[0] === G.lastMg) G.mgBag.push(G.mgBag.shift());
     }
     const id = G.mgBag.shift();
     G.lastMg = id;
-    return { mg: pool.find((x) => x.id === id) || pool[0], pool };
+    return { mg: usable.find((x) => x.id === id) || usable[0], pool: usable };
   }
 
   async function minigameRound() {
@@ -978,46 +1045,53 @@ export default async function start(ctx) {
     const parts = participantsFor();
     if (!parts.length) return;
     const { mg, pool } = chooseMinigame(parts.length);
+    G.mgCount++;
+    log(`minigame:${mg.id}`);
     cam.set(world.center, { dist: 58, pitch: 0.95, yaw: 0, stiff: 1.4 });
-    waitAll('🎮 Minigame time!');
-    await hud.banner('🎮 MINIGAME TIME!', 1300, rt.speed);
+    waitAll('Minigame time!');
+    await hud.banner('MINIGAME TIME!', 1300, rt.speed);
     // Roulette
-    const m = hud.modal('<div class="pb-tag">🎮 MINIGAME</div><h1>Which game is next?</h1>');
-    const names = pool.map((x) => x.name);
-    await rt.guard(hud.roulette(m.el, names, Math.max(0, pool.indexOf(mg)), { speed: rt.speed, spins: pool.length > 1 ? 3 : 1 }));
+    const m = hud.modal('<div class="pb-tag">Minigame</div><h1>Which game is next?</h1>');
+    const names = pool.map((x) => escapeHtml(x.name));
+    await rt.guard(hud.roulette(m.el, names, Math.max(0, pool.indexOf(mg)), { speed: rt.speed, spins: pool.length > 1 ? 2 : 1 }));
     await W(600);
-    // Instruction card + READY check
+    // Instruction card + READY check (TV and phones)
     const plist = parts.map((pid) => ctx.player(pid)).filter(Boolean);
     const ready = new Set();
-    const timeLimit = 10000;
-    const card = () => `<div class="pb-tag">🎮 ${mg.mode === 'teams' ? 'TEAM GAME' : mg.mode === 'coop' ? 'CO-OP' : 'FREE FOR ALL'}</div><h1>${escapeHtml(mg.name)}</h1>
+    const timeLimit = 12000 / rt.speed;
+    const t0 = Date.now();
+    const portraitOf = (pid) => pieceOf(pid)?.portrait || '';
+    const card = () => `<div class="pb-tag">${mg.mode === 'teams' ? 'Team game' : mg.mode === 'coop' ? 'Co-op' : 'Free for all'}</div><h1>${escapeHtml(mg.name)}</h1>
       <p>${mg.instructions || ''}</p>${controlsDiagram(mg.controls)}
-      <div class="pb-ready">${plist.map((pp) => chip(pp, ready.has(pp.id))).join('')}</div>
-      <div class="pb-timer"><div></div></div><p style="color:#5a6390;font-size:clamp(13px,1.1vw,20px)">Tap <b>READY</b> on your phone!</p>`;
+      <div class="pb-ready">${plist.map((pp) => chip(pp, ready.has(pp.id), portraitOf(pp.id))).join('')}</div>
+      <div class="pb-timer"><div></div></div><p style="color:var(--sub);font-size:clamp(13px,1.2vw,22px)">Tap <b>READY</b> on your phone</p>`;
+    const syncBar = () => {
+      const b = m.el.querySelector('.pb-timer div');
+      if (!b) return;
+      const left = Math.max(0, timeLimit - (Date.now() - t0));
+      b.style.transition = 'none';
+      b.style.width = `${(left / timeLimit) * 100}%`;
+      requestAnimationFrame(() => requestAnimationFrame(() => { b.style.transition = `width ${left / 1000}s linear`; b.style.width = '0%'; }));
+    };
     m.set(card());
-    const bar = () => m.el.querySelector('.pb-timer div');
-    requestAnimationFrame(() => { const b = bar(); if (b) { b.style.transitionDuration = `${timeLimit / 1000 / rt.speed}s`; b.style.width = '0%'; } });
+    syncBar();
+    const introState = (extra = {}) => ({ view: 'mgIntro', name: mg.name, instructions: mg.instructions, controls: mg.controls || {}, mode: mg.mode, deadline: t0 + timeLimit, total: timeLimit, ...extra });
     for (const pid of allPids()) {
-      if (parts.includes(pid)) setPhone(pid, { view: 'mgIntro', name: mg.name, instructions: mg.instructions, controls: mg.controls || {} });
-      else if (pieceOf(pid)) setPhone(pid, { view: 'wait', text: `🎮 <b>${escapeHtml(mg.name)}</b><br>A teammate plays this one for your team — cheer them on!` });
+      if (parts.includes(pid)) setPhone(pid, introState());
+      else if (pieceOf(pid)) setPhone(pid, { view: 'wait', text: `<b>${escapeHtml(mg.name)}</b><br>A teammate plays this one for your team. Cheer them on!` });
     }
     await new Promise((res) => {
-      const t0 = Date.now();
       const check = () => {
         const allReady = plist.every((pp) => ready.has(pp.id) || !connected(pp.id));
-        if (allReady || Date.now() - t0 > timeLimit / rt.speed) { stop(); readyHandler = null; res(); }
+        if (allReady || Date.now() - t0 > timeLimit) { stop(); readyHandler = null; res(); }
       };
       readyHandler = (pid) => {
         if (!parts.includes(pid) || ready.has(pid)) return;
         ready.add(pid);
         sfx.play('blip');
-        const b = bar();
-        const w = b?.style.width;
         m.set(card());
-        const nb = bar();
-        if (nb) { nb.style.transition = 'none'; nb.style.width = '0%'; }
-        void w;
-        setPhone(pid, { view: 'mgIntro', name: mg.name, instructions: mg.instructions, controls: mg.controls || {}, ready: true });
+        syncBar();
+        setPhone(pid, introState({ ready: true }));
         check();
       };
       const stop = rt.interval(check, 200);
@@ -1056,8 +1130,9 @@ export default async function start(ctx) {
       players: parts.map((pid) => ctx.player(pid)).filter(Boolean),
       teams,
       input,
+      portraits: Object.fromEntries(parts.map((pid) => [pid, pieceOf(pid)?.portrait || ''])),
       send: (pid, d) => {
-        if (d?.type === 'vibrate') ctx.send(pid, { type: 'vibrate', ms: d.ms ?? d.pattern ?? 40 });
+        if (d?.type === 'vibrate') ctx.vibrate(pid, d.pattern ?? d.ms ?? 40);
         else ctx.send(pid, { type: 'mgmsg', run, d });
       },
       sharedAsset: ctx.sharedAsset,
@@ -1066,10 +1141,10 @@ export default async function start(ctx) {
     let scores = {};
     let timer = 0;
     try {
-      const limit = ((mg.duration || 60) + 25) * 1000;
+      const limit = ((mg.duration || 60) + 40) * 1000;
       scores = await Promise.race([
         Promise.resolve().then(() => mg.run(env)),
-        new Promise((res) => { timer = setTimeout(() => { console.warn(`minigame ${mg.id} timed out`); res(null); }, limit); }),
+        new Promise((res) => { timer = setTimeout(() => { console.warn(`minigame ${mg.id} timed out`); ac.abort(); res(null); }, limit); }),
       ]) || {};
     } catch (err) {
       console.error('minigame crashed', mg.id, err);
@@ -1103,15 +1178,17 @@ export default async function start(ctx) {
       r.place = place;
       r.reward = r.score == null ? 0 : MG_REWARDS[place - 1] ?? 1;
     });
-    const fmt = (v) => (v == null ? '—' : Number.isInteger(v) ? v : v.toFixed(1));
+    // Everybody tied (e.g. a dead-even tug of war): a small consolation instead of 1st-place coins for all.
+    if (rows.length > 1 && rows.every((r) => r.score === rows[0].score)) rows.forEach((r) => { r.reward = r.score == null ? 0 : 3; });
     cam.set(world.center, { dist: 50, pitch: 0.9, yaw: 0, stiff: 1.4 });
-    const m = hud.modal(`<div class="pb-tag">🎮 ${escapeHtml(mg.name)}</div><h1>Results</h1><div class="pb-rows">${rows.map((r, i) => `
-      <div class="pb-row ${r.place === 1 ? 'first' : ''}" style="--c:${r.p.color};animation-delay:${i * 0.12}s"><span class="pl">${ordinal(r.place)}</span>
-      <span class="nm">${ctx.player(r.p.members[0])?.avatar || ''} ${escapeHtml(pieceName(r.p))}</span><span style="color:#5a6390">${fmt(r.score)}</span><span class="gain">+${r.reward} <i class="ci"></i></span></div>`).join('')}</div>`);
+    const m = hud.modal(`<div class="pb-tag">${escapeHtml(mg.name)}</div><h1>Results</h1><div class="pb-rows">${rows.map((r, i) => `
+      <div class="pb-row ${r.place === 1 ? 'first' : ''}" style="--c:${r.p.color};animation-delay:${i * 0.12}s"><span class="pl">${ordinal(r.place)}</span>${ptr(r.p)}
+      <span class="nm">${escapeHtml(pieceName(r.p))}</span><span class="gain">+${r.reward} ${COIN}</span></div>`).join('')}</div>`);
     sfx.play('win');
     for (const r of rows) {
       for (const pid of r.p.members) {
         if (parts.includes(pid) || pieceOf(pid) === r.p) setPhone(pid, { view: 'mgResult', place: r.place, of: rows.length, reward: r.reward, name: mg.name });
+        vibrate(pid, r.place === 1 ? 'win' : 'tap');
       }
     }
     await W(2300);
@@ -1146,34 +1223,36 @@ export default async function start(ctx) {
     G.phase = 'end';
     G.cur = null;
     refreshHud();
-    waitAll('🏁 The party is over! Watch the TV for the bonus stars…');
+    waitAll('That was the last turn! Watch the TV for the bonus stars…');
     cam.set(world.center, { dist: 52, pitch: 0.85, yaw: 0, stiff: 1.2 });
-    await hud.banner('🏁 That\'s the last turn!', 1800, rt.speed);
+    await hud.banner('That\'s the last turn!', 1800, rt.speed);
     const bonuses = [
-      { icon: '🎮', name: 'Minigame Star', desc: 'Won the most coins in minigames', key: (p) => p.stats.mg },
-      { icon: '<i class="ci"></i>', name: 'Coin Star', desc: 'Held the most coins at one time', key: (p) => p.stats.maxCoins },
-      { icon: '❓', name: 'Happening Star', desc: 'Landed on the most ❓ spaces', key: (p) => p.stats.events },
+      { name: 'Minigame Star', desc: 'Won the most coins in minigames', key: (p) => p.stats.mg },
+      { name: 'Coin Star', desc: 'Held the most coins at one time', key: (p) => p.stats.maxCoins },
+      { name: 'Happening Star', desc: 'Landed on the most Happening spaces', key: (p) => p.stats.events },
     ];
-    const m = hud.modal('<h1>⭐ Bonus Stars! ⭐</h1><h2>Three extra stars are up for grabs…</h2>');
+    const drum = `<p class="pb-big"><i class="si" style="animation:pbDrum .5s ease-in-out infinite alternate;display:inline-block"></i></p><style>@keyframes pbDrum{to{transform:scale(1.25) rotate(18deg)}}</style>`;
+    const m = hud.modal(`<div class="pb-tag">Bonus stars</div><h1>Three extra Stars</h1><h2>are up for grabs…</h2>${drum}`);
     await W(2000);
     for (const b of bonuses) {
-      m.set(`<div class="pb-tag">BONUS STAR</div><h1>${b.icon} ${b.name}</h1><h2>${b.desc}</h2><p class="pb-big pb-drum">🥁</p>`);
+      m.set(`<div class="pb-tag">Bonus star</div><h1>${b.name}</h1><h2>${b.desc}</h2>${drum}`);
       for (let i = 0; i < 8; i++) { sfx.play('tick'); await W(160); }
       const best = Math.max(...G.pieces.map(b.key));
       const winners = best > 0 ? G.pieces.filter((p) => b.key(p) === best) : [];
       if (!winners.length) {
-        m.set(`<div class="pb-tag">BONUS STAR</div><h1>${b.icon} ${b.name}</h1><h2>Nobody earned this one!</h2>`);
+        m.set(`<div class="pb-tag">Bonus star</div><h1>${b.name}</h1><h2>Nobody earned this one!</h2>`);
         await W(1600);
         continue;
       }
-      m.set(`<div class="pb-tag">BONUS STAR</div><h1>${b.icon} ${b.name}</h1><h2>${b.desc} (${best})</h2>
-        <div class="pb-vs">${winners.map((w) => `<div class="side win" style="--c:${w.color}"><div class="big">${ctx.player(w.members[0])?.avatar || ''}</div>${escapeHtml(pieceName(w))}</div>`).join('')}</div><p>+1 ⭐</p>`);
+      m.set(`<div class="pb-tag">Bonus star</div><h1>${b.name}</h1><h2>${b.desc} (${best})</h2>
+        <div class="pb-vs">${winners.map((w) => `<div class="side win" style="--c:${w.color}">${ptr(w, 'big')}${escapeHtml(pieceName(w))}</div>`).join('')}</div><p>+1 ${STAR}</p>`);
       sfx.play('win');
       hud.flash();
       for (const w of winners) {
         w.stars++;
         particles.sparkle(headPos(w), 14);
         w.obj.anim.play('win');
+        w.members.forEach((pid) => vibrate(pid, 'success'));
       }
       refreshHud();
       refreshPhones();
@@ -1182,16 +1261,19 @@ export default async function start(ctx) {
     }
     const ranked = [...G.pieces].sort((a, b) => b.stars - a.stars || b.coins - a.coins);
     const win = ranked[0];
-    m.set('<h1>And the Party Star is…</h1><p class="pb-big">🥁</p>');
+    m.set(`<div class="pb-tag">The winner</div><h1>And the Party Star is…</h1>${drum}`);
     for (let i = 0; i < 12; i++) { sfx.play('tick'); await W(140); }
     m.close();
     // Winner celebration on the board
     for (const p of G.pieces) p.obj.anim.play(p === win ? 'win' : 'sad');
     cam.set(win.obj.root, { dist: 8.5, pitch: 0.35, yaw: 0, stiff: 1.8 });
-    await hud.banner(`🏆 ${escapeHtml(pieceName(win))}!<small>⭐ ${win.stars} · <i class="ci"></i> ${win.coins}</small>`, 2400, rt.speed);
+    win.members.forEach((pid) => vibrate(pid, 'win'));
+    G.pieces.filter((p) => p !== win).forEach((p) => p.members.forEach((pid) => vibrate(pid, 'lose')));
+    await hud.banner(`${escapeHtml(pieceName(win))}!<small>${win.stars} ${STAR} · ${win.coins} ${COIN}</small>`, 2400, rt.speed);
     sfx.play('win');
     for (let i = 0; i < 3; i++) {
       particles.confetti(win.obj.root.position.clone().add(new THREE.Vector3(0, 1.5, 0)), 120);
+      cam.shake(0.25);
       await W(500);
     }
     await W(1500);
@@ -1199,9 +1281,10 @@ export default async function start(ctx) {
     for (const p of ranked) {
       for (const pid of p.members) {
         const pl = ctx.player(pid);
-        if (pl) rows.push({ player: pl, score: `⭐${p.stars} · ${p.coins} coins`, label: p.members.length > 1 ? `(${pieceName(p)})` : '' });
+        if (pl) rows.push({ player: pl, score: `${p.stars} ${p.stars === 1 ? 'star' : 'stars'} · ${p.coins} coins`, label: p.members.length > 1 ? pieceName(p) : '' });
       }
     }
+    log('results');
     if (!rows.length) return 'menu';
     return ctx.showResults(rows, { title: 'Party Board', subtitle: `${pieceName(win)} is the Party Star!` });
   }
@@ -1221,7 +1304,7 @@ export default async function start(ctx) {
     extras.add(orbitFn);
     hud.renderCards([]);
     let turns = DEBUG.turns;
-    if (!turns) {
+    if (!turns || DEBUG.setup) {
       const m = hud.modal(setupSheet());
       refreshSetup();
       const r = await new Promise((res) => {
@@ -1229,7 +1312,7 @@ export default async function start(ctx) {
         rt.timeout(() => res({ turns: 10 }), 90000);
       });
       setupResolve = null;
-      turns = [10, 15, 20].includes(Number(r.turns)) ? Number(r.turns) : 10;
+      turns = DEBUG.turns || (LENGTHS.some((l) => l.turns === Number(r.turns)) ? Number(r.turns) : 10);
       m.close();
     }
     orbit = false;
@@ -1246,7 +1329,7 @@ export default async function start(ctx) {
     G.pieces.forEach((p) => p.obj.root.position.copy(world.spacePos(0)));
     arrange(null, true);
     G.phase = 'intro';
-    waitAll('🎉 Welcome to Party Board!');
+    waitAll('Welcome to Party Board!');
     await intro();
     await rollOrder();
     G.phase = 'turns';
@@ -1255,12 +1338,14 @@ export default async function start(ctx) {
       await addPending();
       refreshHud();
       refreshPhones();
-      if (isFrenzy() && turn === G.maxTurns - 4) {
+      if (frenzyLen() && turn === G.maxTurns - frenzyLen() + 1) {
         world.setFrenzy(true);
         hud.setFrenzy(true);
         sfx.play('powerup');
         cam.shake(0.5);
-        await hud.banner('🔥 FINAL FRENZY! 🔥<small>Last 5 turns · Blue +6 · Red −5</small>', 2600, rt.speed);
+        ctx.vibrate('all', 'boost');
+        log('frenzy');
+        await hud.banner(`FINAL FRENZY!<small>Last ${frenzyLen()} turns · Blue +6 · Red −5</small>`, 2600, rt.speed);
       } else {
         await hud.banner(turn === G.maxTurns ? 'LAST TURN!' : `Turn ${turn}`, 1100, rt.speed);
       }
@@ -1277,7 +1362,9 @@ export default async function start(ctx) {
       rt = makeRuntime(DEBUG.fast);
       rng = makeRng(DEBUG.seed ?? undefined);
       asks.clear();
-      runGame();
+      extras.clear();
+      hud.hideCaption();
+      runGame().catch((err) => console.error('party-board flow error', err));
     }
   }
 
@@ -1286,6 +1373,7 @@ export default async function start(ctx) {
     if (!msg || typeof msg !== 'object') return;
     switch (msg.type) {
       case 'hello':
+        sendArt(pid, true);
         if (G?.phase === 'setup') refreshSetup();
         else sendState(pid);
         break;
@@ -1317,7 +1405,7 @@ export default async function start(ctx) {
     if (rejoin && phone.has(p.id)) { sendState(p.id); return; }
     if (G.pieces.length < MAX_PIECES) {
       G.pending.push(p.id);
-      setPhone(p.id, { view: 'wait', text: '👋 Welcome! You\'ll hop onto the board at the start of the next turn.' });
+      setPhone(p.id, { view: 'wait', text: 'Welcome! You\'ll hop onto the board at the start of the next turn.' });
     } else addToTeam(p.id);
   });
 
@@ -1332,7 +1420,9 @@ export default async function start(ctx) {
   window.__pb = {
     get phase() { return G?.phase; },
     get turn() { return G?.turn; },
+    get maxTurns() { return G?.maxTurns; },
     get cur() { return G?.cur; },
+    get log() { return G ? [...G.log] : []; },
     get pieces() { return G?.pieces.map((p) => ({ name: pieceName(p), coins: p.coins, stars: p.stars, space: p.space, members: p.members.length, items: p.items })); },
     get minigame() { return boardPaused; },
   };

@@ -68,17 +68,13 @@ export default {
       shuffleColors();
       // called-colour panel + screen edge glow
       const panel = document.createElement('div');
-      panel.style.cssText = 'position:absolute;top:11vh;left:50%;transform:translateX(-50%);z-index:21;pointer-events:none;text-align:center;font-family:var(--font);transition:opacity .2s;opacity:0';
+      panel.style.cssText = 'position:absolute;top:11vh;left:50%;transform:translateX(-50%);z-index:21;pointer-events:none;text-align:center;font-family:Figtree,system-ui,sans-serif;transition:opacity .2s;opacity:0';
       s.root.appendChild(panel);
-      const edge = document.createElement('div');
-      edge.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:5;transition:box-shadow .2s';
-      s.root.appendChild(edge);
       function drawSign(col, frac = 1) {
-        if (!col) { panel.style.opacity = 0; edge.style.boxShadow = 'none'; return; }
+        if (!col) { panel.style.opacity = 0; return; }
         panel.style.opacity = 1;
-        panel.innerHTML = `<div style="background:${col.css};color:#fff;font-weight:700;font-size:7vmin;padding:.4vmin 5vmin;border-radius:2.4vmin;-webkit-text-stroke:.3vmin #0004;box-shadow:0 1vmin 0 #0004">${col.name}</div>
+        panel.innerHTML = `<div style="background:${col.css};color:#fff;font-weight:800;font-size:8vmin;padding:.4vmin 6vmin;border-radius:2.4vmin;box-shadow:0 1vmin 0 #0004">${col.name}</div>
           <div style="margin:1.2vmin auto 0;height:1.2vmin;width:30vmin;background:#0004;border-radius:9px;overflow:hidden"><div style="height:100%;width:${frac * 100}%;background:#fff"></div></div>`;
-        edge.style.boxShadow = `inset 0 0 7vmin 1.2vmin ${col.css}`;
       }
       drawSign(null);
 
@@ -134,7 +130,7 @@ export default {
             outOrder.push(c.id);
             s.hud.setOut(c.id);
             s.vibrate(c.id, 300);
-            s.status(c.id, '😵 You fell! Spectating…');
+            s.status(c.id, 'You fell! Watch the TV…');
             sfx.play('lose');
             s.pop(c.pos.clone().setY(0.5), 'BYE!', '#fff');
           }

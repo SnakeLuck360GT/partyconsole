@@ -622,7 +622,11 @@ export async function buildTrackScene(track, sharedAsset, { lowDetail = false } 
       const k = Math.floor(r() * list.length);
       const pr = list[k];
       const h = hRange[0] + r() * (hRange[1] - hRange[0]);
-      scatter[bucket].push({ k, x, y: t.h - 0.05, z, ry: r() * Math.PI * 2, s: h / Math.max(0.1, pr.size.y) });
+      const sc = h / Math.max(0.1, pr.size.y);
+      // keep the whole footprint (not just the centre) clear of the road, walls and the chase camera
+      const radius = (Math.hypot(pr.size.x, pr.size.z) / 2) * sc;
+      if (t.d - radius < wd + band[0] * 0.5 + (bucket === 'small' ? 0 : 2)) continue;
+      scatter[bucket].push({ k, x, y: t.h - 0.05, z, ry: r() * Math.PI * 2, s: sc });
       placed++;
     }
   };

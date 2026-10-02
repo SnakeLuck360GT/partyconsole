@@ -56,12 +56,27 @@ function iconTexture(type) {
       }
       g.closePath();
       g.fill();
-    } else {
-      const glyph = { event: '?', shop: '🛍️', duel: '⚔️' }[type];
-      g.font = type === 'event' ? '900 170px Fredoka, Arial Black, sans-serif' : '130px sans-serif';
+    } else if (type === 'shop') {
+      // shopping bag
+      g.beginPath();
+      g.roundRect(-58, -28, 116, 96, 14);
+      g.fill();
+      g.lineWidth = 16;
+      g.beginPath();
+      g.arc(0, -30, 30, Math.PI, 0);
+      g.stroke();
+      g.shadowColor = 'transparent';
+      g.fillStyle = '#ff9500';
+      g.font = '900 64px Figtree, Arial Black, sans-serif';
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.fillText(glyph, 0, type === 'event' ? 10 : 8);
+      g.fillText('$', 0, 22);
+    } else {
+      const glyph = type === 'duel' ? 'VS' : '?';
+      g.font = type === 'event' ? '900 170px Figtree, Arial Black, sans-serif' : '900 110px Figtree, Arial Black, sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(glyph, 0, type === 'event' ? 10 : 6);
     }
   });
 }

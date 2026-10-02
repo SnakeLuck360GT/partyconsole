@@ -99,7 +99,7 @@ export default {
         const ts = tiles.filter((x) => x.d === ring && x.state === 'ok');
         ts.forEach((x) => { x.state = 'warn'; x.t = 0; });
         sfx.play('blip');
-        s.hud.note('⚠️ The ice is cracking!', 1600);
+        s.hud.note('The ice is cracking!', 1600);
       }
 
       s.onFrame((dt) => {
@@ -161,7 +161,7 @@ export default {
             outOrder.push(c.id);
             s.hud.setOut(c.id);
             s.vibrate(c.id, 300);
-            s.status(c.id, '💦 Splash! You are out.');
+            s.status(c.id, 'Splash! You are out.');
             sfx.play('lose');
             s.pop(c.pos.clone().setY(1.5), 'SPLASH!', '#9fd8ff');
           }

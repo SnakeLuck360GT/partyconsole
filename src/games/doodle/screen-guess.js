@@ -3,7 +3,7 @@ import { sfx } from '../../sdk/audio.js';
 import { Surface, LivePlayer, packOps, ASPECT } from './draw-core.js';
 import { judge, makeMask, letterCount, isLetter } from './text.js';
 import { TIMEOUT, el, esc, clamp, shuffled, fitBox } from './util.js';
-import { floatEmoji } from './fx.js';
+import { floatEmoji, doodleSvg } from './fx.js';
 import { logoHtml, chip, avatar, makeTimer, underline } from './tv-ui.js';
 
 const DIFFS = [
@@ -15,6 +15,7 @@ const CHOOSE_MS = 10000;
 const REVEAL_MS = 5600;
 const ARTIST_GRACE_MS = 7000;
 const REACTIONS = ['👍', '😂', '😮', '🔥', '❤️', '🤔'];
+const MAX_TURNS_BIG = 10; // with lots of players, a game is capped at this many turns (least-drawn players go first)
 
 export class DrawGuess {
   constructor(G) {
@@ -37,8 +38,8 @@ export class DrawGuess {
     this.build();
     for (const p of this.ctx.players()) this.scores.set(p.id, 0);
     const n0 = this.ctx.players().length;
-    this.rounds = n0 > 10 ? 1 : clamp(Math.floor(10 / n0), 1, 3);
-    this.totalTurns = n0 > 10 ? 10 : n0 * this.rounds;
+    this.rounds = n0 > MAX_TURNS_BIG ? 1 : clamp(Math.floor(10 / n0), 1, 3);
+    this.totalTurns = n0 > MAX_TURNS_BIG ? MAX_TURNS_BIG : n0 * this.rounds;
     this.turnNo = 0;
     this.round = 1;
     this.G.setPhase(this.phaseObj());
@@ -49,7 +50,7 @@ export class DrawGuess {
       if (this.ctx.players().length < 2 || this.turnNo >= this.totalTurns) break;
       this.round = r;
       this.renderRound();
-      if (this.rounds > 1) await this.G.banner(`Round ${r} <small>of ${this.rounds}</small>`, 1500);
+      if (this.rounds > 1) await this.G.banner(`Round ${r}<small>of ${this.rounds}</small>`, 1500);
       const order = this.pickArtists(this.totalTurns - this.turnNo);
       for (const pid of order) {
         if (this.R.dead) return null;
@@ -63,7 +64,7 @@ export class DrawGuess {
     if (this.ctx.players().length < 2) {
       await this.G.banner('Not enough players left!', 2000);
     } else {
-      await this.G.banner('That\'s a wrap! 🎨', 1700);
+      await this.G.banner('That\'s a wrap!', 1700);
     }
     this.t = null;
     const rows = this.ctx.allPlayers()
@@ -120,7 +121,7 @@ export class DrawGuess {
     this.renderRound();
     this.renderPlayers();
     this.renderArtist();
-    this.maskEl.innerHTML = `<span class="dg-choosing-txt">${esc(artist?.name ?? '?')} is choosing…</span>`;
+    this.maskEl.innerHTML = '<span class="dg-choosing-txt">Picking a word…</span>';
     this.lenEl.textContent = '';
     this.overlay.innerHTML = `
       <div class="dg-choosing">
@@ -129,8 +130,9 @@ export class DrawGuess {
         <div class="dg-dots"><i></i><i></i><i></i></div>
       </div>`;
     this.overlay.hidden = false;
-    this.feedAdd(`✏️ <b style="color:${artist?.color}">${esc(artist?.name)}</b> is up to draw!`, 'sys');
+    this.feedAdd(`<b style="color:${artist?.color}">${esc(artist?.name)}</b> is up to draw`, 'sys');
     sfx.play('whoosh');
+    this.G.vibrate(artistId, 'turn');
     this.G.refreshViews();
 
     // ---- choose
@@ -138,7 +140,7 @@ export class DrawGuess {
     const pick = await t.gate.promise;
     if (this.R.dead) return;
     if (!this.G.isConnected(artistId)) {
-      this.feedAdd(`😴 ${esc(artist?.name)} left, skipping their turn`, 'sys');
+      this.feedAdd(`${esc(artist?.name)} left, skipping their turn`, 'sys');
       this.overlay.innerHTML = '<div class="dg-choosing"><div>Turn skipped</div></div>';
       await this.R.sleep(1500);
       return;
@@ -162,11 +164,13 @@ export class DrawGuess {
     t.mask = makeMask(t.word, t.revealed);
     this.overlay.hidden = true;
     this.overlay.innerHTML = '';
+    this.renderArtist();
     this.renderMask(true);
     this.lenEl.textContent = `(${letterCount(t.word)})`;
     this.renderPlayers();
     sfx.play('go');
     this.G.refreshViews();
+    for (const p of this.ctx.players()) if (p.id !== artistId) this.G.vibrate(p.id, 'tap');
 
     // ---- draw
     t.gate = this.R.gate(null);
@@ -232,7 +236,7 @@ export class DrawGuess {
   view(pid, hello) {
     const t = this.t;
     const score = this.scores.get(pid) || 0;
-    if (!t) return { kind: 'wait', key: 'dg-wait', emoji: '✏️', title: 'Get ready to doodle!', sub: 'Draw & Guess', score };
+    if (!t) return { kind: 'wait', key: 'dg-wait', art: 'pencil', title: 'Get ready to doodle!', sub: 'Draw & Guess', score };
     const ap = this.ctx.player(t.artist);
     const a = ap ? { name: ap.name, color: ap.color, avatar: ap.avatar } : { name: '?', color: '#999', avatar: '❔' };
     const endsIn = Math.max(0, t.endsAt - Date.now());
@@ -240,7 +244,7 @@ export class DrawGuess {
       if (pid === t.artist) {
         return { kind: 'choose', key: `dg-c${t.id}`, turn: t.id, words: t.choices.map((c) => ({ w: c.w, d: c.d, mult: DIFFS[c.d].mult })), endsIn };
       }
-      return { kind: 'wait', key: `dg-cw${t.id}`, emoji: '🤔', title: `${a.name} is picking a word…`, sub: 'Get your guessing thumbs ready!', who: a, score };
+      return { kind: 'wait', key: `dg-cw${t.id}`, art: 'question', title: `${a.name} is picking a word…`, sub: 'Get your guessing thumbs ready', who: a, score };
     }
     if (t.phase === 'draw') {
       if (pid === t.artist) {
@@ -306,7 +310,9 @@ export class DrawGuess {
       const apts = Math.round((50 * t.mult) / 5) * 5;
       t.gains.set(t.artist, (t.gains.get(t.artist) || 0) + apts);
       this.scores.set(t.artist, (this.scores.get(t.artist) || 0) + apts);
-      this.feedAdd(`✅ <b style="color:${p.color}">${esc(p.name)}</b> guessed it! <span class="pts">+${pts}</span>`, 'ok');
+      this.feedAdd(`<span class="tick">${doodleSvg('check', '#22a45d', 12)}</span><b style="color:${p.color}">${esc(p.name)}</b><span class="what">got it!</span><span class="pts">+${pts}</span>`, 'ok');
+      this.G.vibrate(pid, 'success');
+      this.G.vibrate(t.artist, 'tap');
       sfx.play('correct');
       this.renderPlayers();
       const row = this.plist.querySelector(`[data-id="${CSS.escape(pid)}"]`);
@@ -317,7 +323,8 @@ export class DrawGuess {
       const guessers = this.ctx.players().filter((x) => x.id !== t.artist).length;
       this.G.send(t.artist, { type: 'gotit', name: p.name, n: t.guessed.size, of: guessers, pts: apts });
     } else if (res === 'close') {
-      this.feedAdd(`🔥 <b style="color:${p.color}">${esc(p.name)}</b> is so close!`, 'close');
+      this.feedAdd(`<b style="color:${p.color}">${esc(p.name)}</b> is close!`, 'close');
+      this.G.vibrate(pid, 'bump');
       sfx.play('blip');
       this.G.send(pid, { type: 'result', r: 'close', text });
     } else if (res === 'wrong') {
@@ -344,9 +351,9 @@ export class DrawGuess {
     if (!this.scores.has(p.id)) this.scores.set(p.id, 0);
     if (t && p.id === t.artist) {
       t.goneAt = null;
-      this.feedAdd(`🔌 ${esc(p.name)} is back!`, 'sys');
+      this.feedAdd(`${esc(p.name)} is back`, 'sys');
     } else if (!rejoin) {
-      this.feedAdd(`👋 <b style="color:${p.color}">${esc(p.name)}</b> joined. Start guessing!`, 'sys');
+      this.feedAdd(`<b style="color:${p.color}">${esc(p.name)}</b> joined the game`, 'sys');
       sfx.play('join');
     }
     this.renderPlayers();
@@ -356,7 +363,7 @@ export class DrawGuess {
     const t = this.t;
     if (t && p.id === t.artist && t.phase !== 'reveal') {
       t.goneAt = Date.now();
-      this.feedAdd(`📵 ${esc(p.name)} disconnected…`, 'sys');
+      this.feedAdd(`${esc(p.name)} disconnected…`, 'sys');
       if (t.phase === 'choose') t.gate.open(TIMEOUT);
     }
     this.renderPlayers();
@@ -367,12 +374,12 @@ export class DrawGuess {
   build() {
     const s = this.G.env.stage;
     s.innerHTML = '';
+    this.G.env.root.classList.add('busy');
     this.el = el('div', 'dg', s, `
       <header class="dg-top">
         <div class="dd-logo small">${logoHtml()}</div>
+        <div class="dg-hint"><div class="dg-timer-slot"></div><div class="dg-mask"></div><div class="dg-len"></div></div>
         <div class="dg-round"></div>
-        <div class="dg-hint"><div class="dg-mask"></div><div class="dg-len"></div></div>
-        <div class="dg-timer-slot"></div>
       </header>
       <aside class="dg-players dd-card"><div class="dd-card-title">Players</div><div class="dg-plist"></div></aside>
       <main class="dg-center">
@@ -416,7 +423,7 @@ export class DrawGuess {
   renderArtist() {
     const t = this.t;
     const p = t && this.ctx.player(t.artist);
-    this.artistEl.innerHTML = p ? `${chip(p)} <span>is drawing ✏️</span>` : '';
+    this.artistEl.innerHTML = p ? `${chip(p)} <span>${t.phase === 'choose' ? 'is up next' : 'is drawing'}</span>` : '';
   }
 
   renderMask(fresh = false) {
@@ -448,10 +455,10 @@ export class DrawGuess {
       const isArtist = t && p.id === t.artist;
       const g = t?.guessed.get(p.id);
       const gain = t?.gains.get(p.id);
-      const badge = isArtist ? '<span class="badge">✏️</span>' : g ? '<span class="badge ok">✓</span>' : '';
-      const plus = (final || g) && gain ? `<span class="plus">+${gain}</span>` : '';
+        const plus = (final || g) && gain ? `<span class="plus">+${gain}</span>` : '';
+      const badge = isArtist && !plus ? `<span class="badge">${doodleSvg('pencil', '#ff8a1f', 9)}</span>` : g && !plus ? `<span class="badge ok">${doodleSvg('check', '#22a45d', 13)}</span>` : '';
       return `<div class="pl-row ${isArtist ? 'artist' : ''} ${g ? 'guessed' : ''} ${p.connected ? '' : 'gone'}" data-id="${esc(p.id)}" style="--c:${p.color}">
-        <span class="rk">#${rank}</span>${avatar(p)}<span class="nm">${esc(p.name)}</span>${plus}${badge}<span class="sc">${sc}</span></div>`;
+        <span class="rk">${sc > 0 ? `#${rank}` : ''}</span>${avatar(p)}<span class="nm">${esc(p.name)}</span>${plus}${badge}<span class="sc">${sc}</span></div>`;
     }).join('') + (all.length > shown.length ? `<div class="pl-more">+${all.length - shown.length} more</div>` : '');
   }
 
@@ -468,14 +475,17 @@ export class DrawGuess {
     const guessers = this.ctx.players().filter((p) => p.id !== t.artist).length;
     let sub;
     if (reason === 'left') sub = `${esc(artist?.name)} left the game. No harm done!`;
-    else if (n === 0) sub = 'Nobody got it! 😅';
-    else if (reason === 'all') sub = `Everyone got it! 🎉`;
+    else if (n === 0) sub = 'Nobody got it!';
+    else if (reason === 'all') sub = 'Everyone got it!';
     else sub = `${n} of ${Math.max(n, guessers)} guessed it!`;
     const gains = [...t.gains.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
     const len = t.word.length;
+    const blank = this.surface.isBlank();
     this.revealEl.innerHTML = `
       <div class="dg-rev-card dd-card">
         <i class="dd-tape l"></i><i class="dd-tape r"></i>
+        ${blank ? '' : '<div class="dg-rev-pic"><canvas width="400" height="500"></canvas></div>'}
+        <div class="dg-rev-main">
         <div class="dg-rev-label">The word was</div>
         <div class="dg-rev-word ${len > 12 ? 'long' : ''} ${len > 18 ? 'xlong' : ''}">${esc(t.word.toUpperCase())}</div>
         ${underline(n ? '#5fd35b' : '#ef3e36')}
@@ -484,7 +494,14 @@ export class DrawGuess {
           const p = this.ctx.player(id);
           return p ? `<div class="gain ${id === t.artist ? 'art' : ''}">${avatar(p)}<b>${esc(p.name)}</b><span>+${pts}</span>${id === t.artist ? '<em>artist</em>' : ''}</div>` : '';
         }).join('')}</div>
+        </div>
       </div>`;
+    const pic = this.revealEl.querySelector('.dg-rev-pic canvas');
+    if (pic) {
+      const g = pic.getContext('2d');
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(this.surface.canvas, 0, 0, pic.width, pic.height);
+    }
     this.revealEl.hidden = false;
     if (n > 0) {
       sfx.play('win');

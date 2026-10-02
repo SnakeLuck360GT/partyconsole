@@ -147,3 +147,69 @@ export class ChaseCam {
     c.updateMatrixWorld();
   }
 }
+
+/**
+ * Shared TV camera for 5+ human racers (too many for split screen): a high broadcast-style chase camera
+ * behind the human pack. It frames the leading group of humans (those within ~110 m of track progress of the
+ * front-most human still racing), widening and rising with their spread; stragglers are on the live map.
+ */
+export class SharedCam {
+  constructor(track) {
+    this.track = track;
+    this.camera = new THREE.PerspectiveCamera(52, 16 / 9, 0.5, 700);
+    this.pos = new THREE.Vector3();
+    this.look = new THREE.Vector3();
+    this.focus = new THREE.Vector3();
+    this.yaw = 0;
+    this.spread = 10;
+    this.ready = false;
+    this.tmp = {};
+  }
+
+  setAspect(a) { this.camera.aspect = a; this.camera.fov = clamp(52 * (16 / 9) / a, 46, 70); this.camera.updateProjectionMatrix(); }
+
+  /** karts: human karts. */
+  update(dt, karts) {
+    if (!karts.length) return;
+    const racing = karts.filter((k) => !k.finished && !k.disconnected);
+    const pool = racing.length ? racing : karts;
+    let lead = pool[0];
+    for (const k of pool) if (k.dist > lead.dist) lead = k;
+    let n = 0; let cx = 0; let cy = 0; let cz = 0;
+    for (const k of pool) {
+      if (lead.dist - k.dist > 110) continue;
+      cx += k.x; cy += k.y; cz += k.z; n++;
+    }
+    cx /= n; cy /= n; cz /= n;
+    let R = 6;
+    for (const k of pool) {
+      if (lead.dist - k.dist > 110) continue;
+      R = Math.max(R, Math.hypot(k.x - cx, k.z - cz));
+    }
+    R = Math.min(R, 70);
+    const tr = this.track;
+    tr.project(cx, cz, lead.idx, this.tmp, 60);
+    const hd = this.tmp.hd;
+    const k1 = this.ready ? 1 - Math.exp(-dt * 2.2) : 1;
+    this.yaw += angleDiff(hd, this.yaw) * k1;
+    this.spread += (R - this.spread) * (this.ready ? 1 - Math.exp(-dt * 1.5) : 1);
+    this.focus.x += (cx - this.focus.x) * (this.ready ? 1 - Math.exp(-dt * 4) : 1);
+    this.focus.y += (cy - this.focus.y) * (this.ready ? 1 - Math.exp(-dt * 4) : 1);
+    this.focus.z += (cz - this.focus.z) * (this.ready ? 1 - Math.exp(-dt * 4) : 1);
+    this.ready = true;
+    const s = Math.sin(this.yaw); const c = Math.cos(this.yaw);
+    const back = 13 + this.spread * 1.15;
+    const up = 9 + this.spread * 0.85;
+    this.pos.set(this.focus.x - s * back, this.focus.y + up, this.focus.z - c * back);
+    tr.project(this.pos.x, this.pos.z, lead.idx, this.tmp, 60);
+    this.pos.y = Math.max(this.pos.y, this.tmp.y + 6);
+    this.look.set(this.focus.x + s * 7, this.focus.y + 1, this.focus.z + c * 7);
+    const cam = this.camera;
+    cam.position.copy(this.pos);
+    cam.up.set(0, 1, 0);
+    cam.lookAt(this.look);
+    cam.updateMatrixWorld();
+  }
+
+  reset() { this.ready = false; }
+}

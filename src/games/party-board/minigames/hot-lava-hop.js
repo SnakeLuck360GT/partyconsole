@@ -169,7 +169,7 @@ export default {
               s.shake(0.5);
               sfx.play('hit');
               s.vibrate(c.id, 200);
-              s.status(c.id, "🔥 You're toast! Spectating…");
+              s.status(c.id, "You're toast! Watch the TV…");
               s.pop(c.pos.clone().add(new THREE.Vector3(0, 2.2, 0)), 'OUT!', '#ff6a3d');
             }
           }
@@ -227,7 +227,7 @@ export default {
       winners.forEach((id) => {
         const c = chars.get(id);
         if (!c.alive) { c.root.visible = true; c.pos.set(0, 0, PILLAR + 1.2); c.vel.set(0, 0, 0); c.vy = 0; c.grounded = true; }
-        s.status(id, '🏆 You survived!');
+        s.status(id, 'You survived!');
       });
       await s.finish(winners, { chars });
       return scores;

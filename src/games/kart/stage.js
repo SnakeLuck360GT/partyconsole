@@ -97,11 +97,26 @@ export function createKartStage(container, { lowGfx = false } = {}) {
       renderer.setViewport(r.x, y, r.w, r.h);
       renderer.setScissor(r.x, y, r.w, r.h);
       v.before?.();
+      // per-viewport shadows: each split-screen view re-centres the sun's shadow box on its own kart
+      if (v.shadow) { v.shadow(); renderer.shadowMap.needsUpdate = renderer.shadowMap.enabled; }
       renderer.render(v.scene || scene, v.camera);
       renderer.shadowMap.needsUpdate = false;
     }
     renderer.setScissorTest(false);
   }
+
+  /**
+   * Shadow box for one chase view: centred ahead of the kart (where the camera looks), `half` metres wide.
+   * Everything the player sees up close gets crisp shadows; the box edge sits far ahead where shadows are tiny.
+   */
+  function fitShadowView(x, y, z, heading, half) {
+    const ahead = half * 0.55;
+    _p1.x = x + Math.sin(heading) * ahead; _p1.y = y; _p1.z = z + Math.cos(heading) * ahead;
+    _pts1[0] = _p1;
+    fitShadow(_pts1, half);
+  }
+  const _p1 = { x: 0, y: 0, z: 0 };
+  const _pts1 = [_p1];
 
   return {
     renderer, scene, sun, hemi, sunDir, envTex,
@@ -112,6 +127,7 @@ export function createKartStage(container, { lowGfx = false } = {}) {
     onResize(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     layout,
     fitShadow,
+    fitShadowView,
     render,
     dispose() {
       ro.disconnect();

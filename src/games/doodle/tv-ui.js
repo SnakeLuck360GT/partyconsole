@@ -3,13 +3,8 @@ import { sfx } from '../../sdk/audio.js';
 import { el, esc } from './util.js';
 import { doodleSvg } from './fx.js';
 
-const LOGO_COLORS = ['#ef3e36', '#ff9f1c', '#e6b800', '#1b9e4b', '#3ec6ff', '#2f5bea', '#a24df0', '#ff5ca8'];
-
-export function logoHtml(text = 'Doodle Dash') {
-  let i = 0;
-  return `<span class="dd-logo-word">${[...text].map((ch) => (ch === ' '
-    ? '<i class="sp"></i>'
-    : `<span style="color:${LOGO_COLORS[i++ % LOGO_COLORS.length]};--r:${((i * 37) % 13) - 6}deg;--d:${(i * 0.07).toFixed(2)}s">${esc(ch)}</span>`)).join('')}</span>`;
+export function logoHtml() {
+  return `<span class="dd-logo-word"><span class="a">Doodle</span><span class="b">Dash</span></span>`;
 }
 
 export function chip(p, extra = '') {
@@ -22,11 +17,10 @@ export function avatar(p, cls = '') {
   return `<span class="dd-av ${cls}" style="--c:${p.color}">${p.avatar}</span>`;
 }
 
-/** Circular alarm-clock timer. */
+/** Circular timer. */
 export function makeTimer(parent) {
   const node = el('div', 'dd-timer', parent, `
-    <svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="52" r="40"/><circle class="fg" cx="50" cy="52" r="40" pathLength="100"/>
-    <path class="bell l" d="M16 22 C20 10 34 8 38 14"/><path class="bell r" d="M84 22 C80 10 66 8 62 14"/></svg>
+    <svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="42"/><circle class="fg" cx="50" cy="50" r="42" pathLength="100"/></svg>
     <span class="num"></span>`);
   const fg = node.querySelector('.fg');
   const num = node.querySelector('.num');
@@ -74,7 +68,7 @@ export function countdown(parent, word = 'Go!') {
   });
 }
 
-export function underline(color = '#ff9f1c') {
+export function underline(color = '#ff8a1f') {
   return `<svg class="dd-underline" viewBox="0 0 300 24" preserveAspectRatio="none"><path pathLength="1" d="M6 14 C60 4 120 20 170 10 C210 3 250 18 294 8" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round"/></svg>`;
 }
 

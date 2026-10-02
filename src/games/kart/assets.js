@@ -53,8 +53,25 @@ const _e = new THREE.Euler();
  * Create InstancedMeshes for `proto` at `list` of {x, y, z, ry, s (uniform) | sx,sy,sz, rx, rz}.
  * y is the ground height: the model's bbox bottom is placed on it.
  */
-export function instance(parent, proto, list, { castShadow = true, receiveShadow = true, materialMap = null, center = true } = {}) {
+export function instance(parent, proto, list, opts = {}) {
   if (!proto || !list.length) return [];
+  // Spatial chunks (~70 m cells): each chunk is its own InstancedMesh with a tight bounding sphere, so the
+  // main and shadow passes frustum-cull whole chunks instead of drawing every tree on the map in every viewport.
+  const CELL = 70;
+  if (list.length <= 12 || opts.noChunk) return instanceChunk(parent, proto, list, opts);
+  const cells = new Map();
+  for (const t of list) {
+    const key = `${Math.floor(t.x / CELL)},${Math.floor(t.z / CELL)}`;
+    let c = cells.get(key);
+    if (!c) { c = []; cells.set(key, c); }
+    c.push(t);
+  }
+  const out = [];
+  for (const c of cells.values()) out.push(...instanceChunk(parent, proto, c, opts));
+  return out;
+}
+
+function instanceChunk(parent, proto, list, { castShadow = true, receiveShadow = true, materialMap = null, center = true } = {}) {
   const meshes = [];
   const cx = center ? (proto.box.min.x + proto.box.max.x) / 2 : 0;
   const cz = center ? (proto.box.min.z + proto.box.max.z) / 2 : 0;

@@ -103,17 +103,20 @@ function paint(theme, W = 2048, H = 1024) {
     g.beginPath();
     g.moveTo(0, hz + 4);
     const seed = 13 + li * 7;
+    const hAt = (u) => {
+      if (L.mesa) {
+        const n = fbm(u * 9 + seed + 50, seed, 2);
+        return n > 0.52 ? L.height * (0.75 + 0.25 * fbm(u * 40 + 400, seed, 2)) : L.height * 0.15 * fbm(u * 30 + 300, seed + 1, 2);
+      }
+      const ridge = 1 - Math.abs(fbm(u * L.freq + seed + 50, seed * 0.3, 4) * 2 - 1);
+      return L.height * (0.25 + 0.75 * Math.pow(ridge, 1.6)) * (0.6 + 0.4 * fbm(u * 3 + seed + 50, 1, 2));
+    };
     for (let x = 0; x <= W; x += 4) {
       const u = x / W;
-      let h;
-      if (L.mesa) {
-        const n = fbm(u * 9 + seed, seed, 2);
-        h = n > 0.52 ? L.height * (0.75 + 0.25 * fbm(u * 40, seed, 2)) : L.height * 0.15 * fbm(u * 30, seed + 1, 2);
-      } else {
-        const ridge = 1 - Math.abs(fbm(u * L.freq + seed, seed * 0.3, 4) * 2 - 1);
-        h = L.height * (0.25 + 0.75 * Math.pow(ridge, 1.6)) * (0.6 + 0.4 * fbm(u * 3 + seed, 1, 2));
-      }
-      // seamless wrap: blend the last 5% into the start
+      // seamless wrap: cross-fade the last 20% into the profile that continues past u = 0, so x = W matches x = 0
+      const w = Math.min(1, Math.max(0, (u - 0.8) / 0.2));
+      const k = w * w * (3 - 2 * w);
+      const h = k > 0 ? hAt(u) * (1 - k) + hAt(u - 1) * k : hAt(u);
       g.lineTo(x, hz - h);
     }
     g.lineTo(W, hz + 4);

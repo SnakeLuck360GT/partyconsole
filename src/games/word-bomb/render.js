@@ -63,98 +63,70 @@ export function drawBackdrop(canvas, W, H, dpr, layout) {
   canvas.height = Math.round(H * dpr);
   const g = canvas.getContext('2d');
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  // base gradient
-  const base = g.createLinearGradient(0, 0, 0, H);
-  base.addColorStop(0, '#1d1036');
-  base.addColorStop(0.55, '#140b27');
-  base.addColorStop(1, '#0a0614');
-  g.fillStyle = base;
+  g.fillStyle = '#141519';
   g.fillRect(0, 0, W, H);
 
-  // warm spotlight from above onto the centre
   const { cx, cy, rings, bomb } = layout;
-  const spot = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.6);
-  spot.addColorStop(0, 'rgba(255,120,60,0.20)');
-  spot.addColorStop(0.35, 'rgba(160,60,160,0.12)');
-  spot.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = spot;
-  g.fillRect(0, 0, W, H);
-
-  // bokeh dots (deterministic)
-  let seed = 7;
-  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  for (let i = 0; i < 38; i++) {
-    const x = rnd() * W;
-    const y = rnd() * H;
-    const r = 2 + rnd() * Math.min(W, H) * 0.035;
-    const hue = [330, 280, 20, 200][i % 4];
-    const grd = g.createRadialGradient(x, y, 0, x, y, r);
-    grd.addColorStop(0, `hsla(${hue},90%,70%,${0.05 + rnd() * 0.07})`);
-    grd.addColorStop(1, `hsla(${hue},90%,70%,0)`);
-    g.fillStyle = grd;
-    g.beginPath();
-    g.arc(x, y, r, 0, TAU);
-    g.fill();
-  }
-
-  // arena floor: soft ellipse under the players' ring
   const outer = rings[0];
-  g.save();
-  g.translate(cx, cy);
-  g.scale(1, outer.b / outer.a);
-  const floor = g.createRadialGradient(0, 0, outer.a * 0.1, 0, 0, outer.a * 1.05);
-  floor.addColorStop(0, 'rgba(90,50,140,0.35)');
-  floor.addColorStop(0.7, 'rgba(60,30,100,0.22)');
-  floor.addColorStop(1, 'rgba(40,20,70,0)');
-  g.fillStyle = floor;
-  g.beginPath();
-  g.arc(0, 0, outer.a * 1.05, 0, TAU);
-  g.fill();
-  g.restore();
-
-  // seat tracks
-  for (const ring of rings) {
-    g.save();
+  const tracePath = (ring, k) => {
     g.beginPath();
-    ring.path.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+    ring.path.forEach(([x, y], i) => {
+      const px = cx + (x - cx) * k;
+      const py = cy + (y - cy) * k;
+      if (i) g.lineTo(px, py); else g.moveTo(px, py);
+    });
     g.closePath();
-    g.lineWidth = Math.max(2, ring.a * 0.012);
-    g.strokeStyle = 'rgba(255,255,255,0.05)';
-    g.stroke();
-    g.setLineDash([2, Math.max(10, ring.a * 0.03)]);
+  };
+
+  // the table: a flat disc inside the seat ring, a darker lip, and a faint inner ring
+  tracePath(outer, 1.14);
+  g.fillStyle = '#18191e';
+  g.fill();
+  tracePath(outer, 0.8);
+  g.fillStyle = '#1e2026';
+  g.fill();
+  g.lineWidth = Math.max(2, outer.a * 0.006);
+  g.strokeStyle = 'rgba(244,241,234,0.07)';
+  g.stroke();
+  tracePath(outer, 0.62);
+  g.setLineDash([Math.max(6, outer.a * 0.012), Math.max(10, outer.a * 0.02)]);
+  g.strokeStyle = 'rgba(244,241,234,0.05)';
+  g.stroke();
+  g.setLineDash([]);
+
+  // seat track
+  for (const ring of rings) {
+    tracePath(ring, 1);
+    g.setLineDash([2, Math.max(12, ring.a * 0.03)]);
     g.lineCap = 'round';
-    g.lineWidth = Math.max(2, ring.a * 0.006);
-    g.strokeStyle = 'rgba(255,200,150,0.22)';
+    g.lineWidth = Math.max(2, ring.a * 0.007);
+    g.strokeStyle = 'rgba(244,241,234,0.16)';
     g.stroke();
-    g.restore();
+    g.setLineDash([]);
   }
 
-  // pedestal under the bomb: concentric glowing rings
-  const pr = bomb.R * 1.9;
+  // stand under the bomb
+  const pr = bomb.R * 1.5;
   g.save();
-  g.translate(bomb.x, bomb.y + bomb.R * 0.95);
-  g.scale(1, 0.32);
-  const ped = g.createRadialGradient(0, 0, 0, 0, 0, pr);
-  ped.addColorStop(0, 'rgba(255,140,80,0.28)');
-  ped.addColorStop(0.6, 'rgba(255,90,90,0.10)');
-  ped.addColorStop(1, 'rgba(255,90,90,0)');
-  g.fillStyle = ped;
+  g.translate(bomb.x, bomb.y + bomb.R * 0.98);
+  g.scale(1, 0.3);
   g.beginPath();
   g.arc(0, 0, pr, 0, TAU);
+  g.fillStyle = 'rgba(0,0,0,0.22)';
   g.fill();
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 2; i++) {
     g.beginPath();
-    g.arc(0, 0, pr * (0.45 + i * 0.17), 0, TAU);
+    g.arc(0, 0, pr * (0.7 + i * 0.25), 0, TAU);
     g.lineWidth = 3;
-    g.strokeStyle = `rgba(255,170,120,${0.16 - i * 0.035})`;
+    g.strokeStyle = `rgba(244,241,234,${0.07 - i * 0.025})`;
     g.stroke();
   }
   g.restore();
 
-  // vignette
-  const vig = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+  // soft vignette so the corners recede behind the HUD
+  const vig = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.8);
   vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.35)');
   g.fillStyle = vig;
   g.fillRect(0, 0, W, H);
 }
@@ -199,7 +171,7 @@ export class FX {
     this.canvas.width = Math.round(W * dpr);
     this.canvas.height = Math.round(H * dpr);
     if (!this.embers.length) {
-      for (let i = 0; i < 26; i++) this.embers.push({ x: Math.random() * W, y: Math.random() * H, v: rand(8, 26), s: rand(2, 5), ph: Math.random() * TAU });
+      for (let i = 0; i < 0; i++) this.embers.push({ x: Math.random() * W, y: Math.random() * H, v: rand(8, 26), s: rand(2, 5), ph: Math.random() * TAU });
     }
   }
 
@@ -415,8 +387,8 @@ export class FX {
         g.translate(p.x, p.y);
         g.rotate(p.rot);
         g.globalAlpha = 1 - k * k;
-        g.fillStyle = '#1b1e28';
-        g.strokeStyle = 'rgba(255,160,80,0.8)';
+        g.fillStyle = '#23262f';
+        g.strokeStyle = 'rgba(255,140,60,0.35)';
         g.lineWidth = 1.5;
         g.beginPath();
         g.moveTo(-p.size, -p.size * 0.6);
@@ -502,8 +474,6 @@ export class FX {
     g.translate(px, py);
     g.rotate(a);
     const s = b.R * 0.34 * (1 + b.pulse * 0.15);
-    g.shadowColor = b.rim;
-    g.shadowBlur = s * 0.9;
     g.fillStyle = b.rim;
     g.beginPath();
     g.moveTo(s * 1.1, 0);
@@ -511,9 +481,8 @@ export class FX {
     g.quadraticCurveTo(-s * 0.2, 0, -s * 0.5, s * 0.85);
     g.quadraticCurveTo(s * 0.1, s * 0.2, s * 1.1, 0);
     g.fill();
-    g.shadowBlur = 0;
-    g.lineWidth = Math.max(2, s * 0.12);
-    g.strokeStyle = 'rgba(255,255,255,0.9)';
+    g.lineWidth = Math.max(2, s * 0.1);
+    g.strokeStyle = '#141519';
     g.stroke();
     g.restore();
   }
@@ -526,9 +495,9 @@ export class FX {
     // danger halo
     g.save();
     g.globalCompositeOperation = 'lighter';
-    const hal = R * (1.7 + b.heat * 0.5 + b.pulse * 0.2);
-    const halo = g.createRadialGradient(tr.x, tr.y, R * 0.8, tr.x, tr.y, hal);
-    halo.addColorStop(0, `rgba(255,${Math.round(90 - b.heat * 60)},40,${(0.12 + b.heat * 0.35 + b.pulse * 0.15).toFixed(3)})`);
+    const hal = R * (1.5 + b.heat * 0.5 + b.pulse * 0.15);
+    const halo = g.createRadialGradient(tr.x, tr.y, R * 0.9, tr.x, tr.y, hal);
+    halo.addColorStop(0, `rgba(255,${Math.round(70 - b.heat * 40)},30,${(b.heat * b.heat * 0.4 + b.pulse * b.heat * 0.2).toFixed(3)})`);
     halo.addColorStop(1, 'rgba(255,40,20,0)');
     g.fillStyle = halo;
     g.beginPath();

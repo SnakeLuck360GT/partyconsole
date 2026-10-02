@@ -49,6 +49,18 @@ export const DOODLES = {
   pencil: 'M20 80 L28 60 L70 18 L82 30 L40 72 Z M28 60 L40 72 M20 80 L32 76',
   flower: 'M50 50 m-6 0 a6 6 0 1 0 12 0 a6 6 0 1 0 -12 0 M50 44 C40 24 60 24 50 44 M56 50 C76 40 76 60 56 50 M50 56 C60 76 40 76 50 56 M44 50 C24 60 24 40 44 50 M50 62 L50 94',
   swirl: 'M20 60 C20 30 60 20 70 44 C78 64 54 74 46 60 C40 50 54 42 58 52',
+  bubble: 'M18 24 C18 16 24 12 32 12 L70 12 C78 12 84 16 84 24 L84 52 C84 60 78 64 70 64 L46 64 L28 82 L31 64 C23 64 18 60 18 52 Z',
+  bulb: 'M50 10 C34 10 24 22 24 37 C24 49 32 55 37 64 L63 64 C68 55 76 49 76 37 C76 22 66 10 50 10 Z M38 74 L62 74 M42 85 L58 85',
+  crown: 'M14 72 L19 28 L36 50 L50 20 L64 50 L81 28 L86 72 Z M17 86 L83 86',
+  eye: 'M8 50 C24 26 76 26 92 50 C76 74 24 74 8 50 Z M50 38 C57 38 62 43 62 50 C62 57 57 62 50 62 C43 62 38 57 38 50 C38 43 43 38 50 38 Z',
+  check: 'M16 54 L40 78 L86 24',
+  trophy: 'M32 12 L68 12 L66 42 C64 56 36 56 34 42 Z M32 20 L17 20 C17 35 25 41 34 41 M68 20 L83 20 C83 35 75 41 66 41 M50 56 L50 72 M36 88 L64 88 L60 72 L40 72 Z',
+  phone: 'M32 8 L68 8 C72 8 74 10 74 14 L74 86 C74 90 72 92 68 92 L32 92 C28 92 26 90 26 86 L26 14 C26 10 28 8 32 8 Z M44 82 L56 82',
+  question: 'M32 34 C32 18 46 12 55 14 C68 17 72 31 63 41 C56 48 50 50 50 62 M50 78 L50 82',
+  clock: 'M50 18 C68 18 82 32 82 50 C82 68 68 82 50 82 C32 82 18 68 18 50 C18 32 32 18 50 18 Z M50 32 L50 50 L62 58 M22 16 L12 26 M78 16 L88 26',
+  plug: 'M36 10 L36 30 M64 10 L64 30 M26 30 L74 30 L74 46 C74 60 62 68 50 68 C38 68 26 60 26 46 Z M50 68 L50 92',
+  wave: 'M30 78 C14 62 12 40 22 30 C26 26 32 28 34 34 L40 50 L36 18 C36 10 46 10 47 18 L50 44 L52 12 C53 4 63 5 63 13 L62 44 L67 20 C69 12 78 14 77 22 L72 54 C78 46 86 46 88 52 C82 64 72 82 56 88 C46 92 36 86 30 78 Z',
+  zzz: 'M20 30 L40 30 L20 50 L40 50 M52 46 L68 46 L52 62 L68 62 M74 66 L86 66 L74 78 L86 78',
 };
 const DOODLE_COLORS = ['#ff9f1c', '#ef3e36', '#2f5bea', '#1b9e4b', '#a24df0', '#3ec6ff', '#ff5ca8'];
 
@@ -58,10 +70,10 @@ export function doodleSvg(name, color = '#1f1d2b', width = 5, cls = '') {
 
 /** Background scribbles that draw themselves around the edges of the screen, then fade and re-draw elsewhere. */
 export class Scribbles {
-  constructor(parent, count = 9) {
+  constructor(parent, count = 7) {
     this.layer = el('div', 'dd-scribbles', parent);
     this.items = [];
-    this.names = Object.keys(DOODLES);
+    this.names = ['star', 'heart', 'spiral', 'bolt', 'cloud', 'squiggle', 'arrow', 'sun', 'flower', 'swirl'];
     for (let i = 0; i < count; i++) this.items.push(this._spawn(el('div', 'dd-scribble', this.layer), i * 0.35));
     this.timer = setInterval(() => {
       const it = this.items[Math.floor(Math.random() * this.items.length)];
@@ -190,7 +202,7 @@ export class Confetti {
   }
 }
 
-/** Emoji floating up from a point inside `parent` (coordinates relative to parent, px). */
+/** A sticker (emoji or doodle svg html) floating up from a point inside `parent` (coordinates relative to parent, px). */
 export function floatEmoji(parent, emoji, x, y, label = '') {
   const f = el('div', 'dd-float', parent);
   f.innerHTML = `<span>${emoji}</span>${label ? `<small>${label}</small>` : ''}`;

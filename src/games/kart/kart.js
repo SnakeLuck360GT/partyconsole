@@ -108,7 +108,7 @@ export class Kart {
       this.label.position.y = 3.6;
       this.label.material.depthTest = true;
       this.root.add(this.label);
-      this.labelBase = this.label.scale.clone();
+      this.labelAspect = this.label.scale.x / this.label.scale.y;
     }
     if (night) {
       const hl = new THREE.Mesh(new THREE.PlaneGeometry(5, 11), new THREE.MeshBasicMaterial({ map: glowTex, color: 0xfff0c8, transparent: true, opacity: 0.38, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -538,15 +538,21 @@ export class Kart {
     this.body.visible = !blink;
   }
 
-  /** Scale the name tag so it stays readable at distance from the given camera. */
-  fitLabel(camPos) {
+  /**
+   * Size the name tag for one viewport: a fixed on-screen height (a fraction of the viewport, capped in CSS px),
+   * so it is readable far away but never covers the view up close. Fades out when the kart is right in front.
+   */
+  fitLabel(cam, viewH = 720, maxPx = 30) {
     if (!this.label) return;
-    const d = Math.hypot(camPos.x - this.x, camPos.y - this.y, camPos.z - this.z);
-    const k = clamp(d / 28, 0.55, 2.6);
-    this.label.scale.set(this.labelBase.x * k, this.labelBase.y * k, 1);
-    this.label.position.y = 3.0 + 0.45 * k;
-    // fade out when right in front of the camera so it never blocks the view
-    this.label.material.opacity = clamp((d - 7) / 8, 0, 1) * (this.disconnected ? 0.5 : 1);
+    const p = cam.position;
+    const d = Math.hypot(p.x - this.x, p.y - this.y, p.z - this.z);
+    const px = Math.min(maxPx, Math.max(15, viewH * 0.042)); // label height on screen, CSS px
+    const worldPerPx = (2 * d * Math.tan((cam.fov * Math.PI) / 360)) / Math.max(1, viewH);
+    const hgt = px * worldPerPx;
+    this.label.scale.set(hgt * this.labelAspect, hgt, 1);
+    this.label.position.y = 2.9 + hgt * 0.5;
+    this.label.material.opacity = Math.min(1, Math.max(0, (d - 9) / 9)) * (this.disconnected ? 0.5 : 1);
+    this.label.visible = d > 9 && d < 220;
   }
 
   /** Particles + skid marks (call after update). */

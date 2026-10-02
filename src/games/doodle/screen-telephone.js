@@ -11,10 +11,11 @@ const GRACE_MS = 3000;
 const MAX_STEPS = 6;
 const MAX_CHAINS_SHOWN = 8;
 const VOTE_EMOJI = ['❤️', '😂', '😮', '🔥'];
+const HEART = (c = '#e8443a') => doodleSvg('heart', c, 9);
 const KIND_INFO = {
-  write: { ico: '✍️', title: 'Write a prompt!', text: 'Something fun to draw: a thing, a scene, a silly situation.', art: 'pencil' },
-  draw: { ico: '🎨', title: 'Draw it!', text: 'Your phone shows someone else\'s prompt. Draw it. No letters!', art: 'flower' },
-  describe: { ico: '🔍', title: 'What is it?', text: 'Your phone shows someone\'s drawing. Describe what you see!', art: 'smile' },
+  write: { title: 'Write a prompt', short: 'Write', text: 'Something fun to draw: a thing, a scene, a silly situation.', art: 'pencil', color: '#ff8a1f' },
+  draw: { title: 'Draw it', short: 'Draw', text: 'Your phone shows someone else\'s prompt. Draw it. No letters!', art: 'smile', color: '#2f5bea' },
+  describe: { title: 'What is it?', short: 'Describe', text: 'Your phone shows someone\'s drawing. Describe what you see.', art: 'bubble', color: '#22a45d' },
 };
 
 export class Telephone {
@@ -131,9 +132,9 @@ export class Telephone {
     this.G.setPhase(this.phaseObj());
     this.G.refreshViews();
     if (s < this.N - 1) {
-      await this.G.banner(`Pass it on! <small>${s + 2 < this.N + 1 ? `Next: ${KIND_INFO[this.kindOf(s + 1)].title}` : ''}</small>`, 1500);
+      await this.G.banner(`Pass it on!<small>Next: ${KIND_INFO[this.kindOf(s + 1)].title}</small>`, 1500);
     } else {
-      await this.G.banner('Time for the big reveal! 🍿', 1700);
+      await this.G.banner('Time for the big reveal!', 1700);
     }
   }
 
@@ -169,7 +170,7 @@ export class Telephone {
     if (final) {
       const was = st.subs.has(pid);
       st.subs.set(pid, sub);
-      if (!was) sfx.play('blip');
+      if (!was) { sfx.play('blip'); this.G.vibrate(pid, 'success'); }
       this.renderProgress();
       this.G.sendView(pid);
       if (st.timeUp && this.seats.every((id) => st.subs.has(id) || !this.G.isConnected(id))) st.gate.open('grace-done');
@@ -204,10 +205,10 @@ export class Telephone {
     }
     const st = this.st;
     if (!seat) {
-      return { kind: 'wait', key: 'tp-spec', emoji: '👀', title: 'You\'re spectating', sub: 'This Telephone game started before you joined. You\'ll be in the next one!' };
+      return { kind: 'wait', key: 'tp-spec', art: 'eye', title: 'You\'re spectating', sub: 'This round started before you joined. You\'ll be in the next one!' };
     }
     if (!st || st.gate?.done) {
-      return { kind: 'wait', key: `tp-between-${st?.s ?? 0}`, emoji: '📞', title: 'Passing it on…', sub: 'Look at the TV' };
+      return { kind: 'wait', key: `tp-between-${st?.s ?? 0}`, art: 'arrow', title: 'Passing it on…', sub: 'Look at the TV' };
     }
     const done = st.subs.has(pid);
     const doneCount = this.seats.filter((id) => st.subs.has(id)).length;
@@ -256,17 +257,18 @@ export class Telephone {
     this.lastReact.set(pid, now);
     const c = this.cur;
     const p = this.ctx.player(pid);
-    if (c?.entry && c.entry.by !== pid && !c.voters.has(pid) && this.seatOf.has(pid)) {
+    if (c?.entry && c.entry.by !== pid && !c.voters.has(pid)) {
       c.voters.add(pid);
       c.entry.votes++;
       this.votes.set(c.entry.by, (this.votes.get(c.entry.by) || 0) + 1);
       this.renderVotes();
       this.G.sendView(pid);
       sfx.play('coin');
+      this.G.vibrate(c.entry.by, 'tap');
     }
     const r = this.focusEl?.getBoundingClientRect();
     const rootR = this.wrap.getBoundingClientRect();
-    if (r) floatEmoji(this.wrap, e, r.left - rootR.left + r.width * (0.1 + Math.random() * 0.8), r.bottom - rootR.top - 40, esc(p?.name ?? ''));
+    if (r) floatEmoji(this.wrap, HEART(p?.color), r.left - rootR.left + r.width * (0.1 + Math.random() * 0.8), r.bottom - rootR.top - 40, esc(p?.name ?? ''));
   }
 
   // ---------------------------------------------------------------- step DOM
@@ -276,6 +278,7 @@ export class Telephone {
     const info = KIND_INFO[st.kind];
     const s = this.G.env.stage;
     s.innerHTML = '';
+    this.G.env.root.classList.add('busy');
     this.wrap = el('div', 'tp', s, `
       <header class="tp-top">
         <div class="dd-logo small">${logoHtml()}</div>
@@ -284,12 +287,12 @@ export class Telephone {
       </header>
       <div class="tp-track">${Array.from({ length: this.N }, (_, i) => {
         const k = this.kindOf(i);
-        return `<div class="tk ${i < st.s ? 'done' : ''} ${i === st.s ? 'now' : ''}"><span>${KIND_INFO[k].ico}</span><small>${k === 'write' ? 'Write' : k === 'draw' ? 'Draw' : 'Describe'}</small></div>${i < this.N - 1 ? '<i class="tk-line"></i>' : ''}`;
+        return `<div class="tk ${i < st.s ? 'done' : ''} ${i === st.s ? 'now' : ''}" style="--c:${KIND_INFO[k].color}"><span>${i < st.s ? doodleSvg('check', '#fff', 14) : doodleSvg(KIND_INFO[k].art, i === st.s ? '#fff' : '#9a95a6', 8)}</span><small>${KIND_INFO[k].short}</small></div>${i < this.N - 1 ? '<i class="tk-line"></i>' : ''}`;
       }).join('')}</div>
       <div class="tp-instr dd-card">
         <i class="dd-tape l"></i>
-        <div class="tp-instr-art">${doodleSvg(info.art, '#ff9f1c', 5)}</div>
-        <div><h1>${info.ico} ${info.title}</h1><p>${info.text}</p></div>
+        <div class="tp-instr-art">${doodleSvg(info.art, info.color, 6)}</div>
+        <div><h1>${info.title}</h1><p>${info.text}</p></div>
       </div>
       <div class="tp-grid"></div>
       <div class="tp-progress"><div class="bar"><i></i></div><span></span></div>`);
@@ -302,13 +305,14 @@ export class Telephone {
     const st = this.st;
     if (!st || !this.grid || this.stage !== 'steps') return;
     const n = this.seats.length;
+    this.grid.classList.toggle('big', n <= 8);
     this.grid.classList.toggle('compact', n > 16);
     this.grid.classList.toggle('tiny', n > 36);
     this.grid.innerHTML = this.seats.map((id) => {
       const p = this.ctx.player(id);
       if (!p) return '';
       const done = st.subs.has(id);
-      return `<div class="tp-p ${done ? 'done' : ''} ${p.connected ? '' : 'gone'}" style="--c:${p.color}">${avatar(p)}<b>${esc(p.name)}</b><span class="st">${done ? '✓' : st.kind === 'draw' ? '✏️' : '💭'}</span></div>`;
+      return `<div class="tp-p ${done ? 'done' : ''} ${p.connected ? '' : 'gone'}" style="--c:${p.color}">${avatar(p)}<b>${esc(p.name)}</b><span class="st">${done ? doodleSvg('check', '#22a45d', 14) : '<i class="dots"><i></i><i></i><i></i></i>'}</span></div>`;
     }).join('');
     const done = this.seats.filter((id) => st.subs.has(id)).length;
     this.wrap.querySelector('.tp-progress i').style.width = `${(done / Math.max(1, n)) * 100}%`;
@@ -364,7 +368,7 @@ export class Telephone {
       this.body.classList.remove('overview');
       for (let i = 0; i < chain.entries.length; i++) {
         const entry = chain.entries[i];
-        const auto = entry.kind === 'drawing' ? 13000 : 8000;
+        const auto = entry.kind === 'drawing' ? 10000 : 6500;
         this.showEntry(chain, i);
         this.G.refreshViews();
         this.navGate = this.R.gate(auto);
@@ -381,8 +385,8 @@ export class Telephone {
       // overview of the whole chain
       this.showOverview(chain);
       this.G.refreshViews();
-      this.navGate = this.R.gate(9000);
-      this.autoBar(9000);
+      this.navGate = this.R.gate(8000);
+      this.autoBar(8000);
       const r = await this.navGate.promise;
       if (this.R.dead) return;
       if (r === 'end') endAll = true;
@@ -394,6 +398,7 @@ export class Telephone {
   buildPlay() {
     const s = this.G.env.stage;
     s.innerHTML = '';
+    this.G.env.root.classList.add('busy');
     this.wrap = el('div', 'tpp', s, `
       <header class="tp-top">
         <div class="dd-logo small">${logoHtml()}</div>
@@ -419,7 +424,7 @@ export class Telephone {
 
   renderPlayHint() {
     const h = this.wrap?.querySelector('.tpp-hint');
-    if (h) h.innerHTML = `👑 <b>${esc(this.G.adminName())}</b> taps Next · vote on your phone`;
+    if (h) h.innerHTML = `Vote on your phone · <b>${esc(this.G.adminName())}</b> can skip ahead`;
   }
 
   autoBar(ms) {
@@ -448,7 +453,7 @@ export class Telephone {
       card.innerHTML = `
         <div class="who">${this.whoLine(entry, i)}</div>
         <div class="tpp-bubble dd-card ${i === 0 ? 'first' : ''}">
-          <div class="txt ${len > 40 ? 'long' : ''} ${len > 60 ? 'xlong' : ''}">${entry.missing ? '<em>…ran out of time 😴</em>' : `“${esc(entry.text)}”`}</div>
+          <div class="txt ${len > 40 ? 'long' : ''} ${len > 60 ? 'xlong' : ''}">${entry.missing ? '<em>…ran out of time</em>' : `“${esc(entry.text)}”`}</div>
           ${entry.auto ? '<div class="auto">(a random prompt was picked)</div>' : ''}
         </div>
         <div class="tpp-votes"></div>`;
@@ -456,11 +461,15 @@ export class Telephone {
     } else {
       card.innerHTML = `
         <div class="who">${this.whoLine(entry, i)}</div>
-        <div class="tpp-holder"><div class="tpp-sheet"><canvas></canvas><i class="dd-tape l"></i><i class="dd-tape r"></i>${entry.empty ? '<div class="tpp-empty">(blank page 🙈)</div>' : ''}</div></div>
+        <div class="tpp-holder"><div class="tpp-sheet"><canvas></canvas><i class="dd-tape l"></i><i class="dd-tape r"></i>${entry.empty ? '<div class="tpp-empty">(left blank)</div>' : ''}</div></div>
         <div class="tpp-votes"></div>`;
       const holder = card.querySelector('.tpp-holder');
       const sheet = card.querySelector('.tpp-sheet');
-      requestAnimationFrame(() => fitBox(sheet, holder, ASPECT, 0));
+      const fit = () => fitBox(sheet, holder, ASPECT, 0);
+      fit();
+      const ro = new ResizeObserver(fit);
+      ro.observe(holder);
+      this.cleanups.push(() => ro.disconnect());
       const surf = new Surface(card.querySelector('canvas'));
       if (!entry.empty) {
         this.cur.replayer = new Replayer(surf, entry.ops, 3800);
@@ -473,7 +482,7 @@ export class Telephone {
 
   renderVotes() {
     const v = this.focusEl?.querySelector('.tpp-votes');
-    if (v && this.cur?.entry) v.innerHTML = this.cur.entry.votes ? `❤️ <b>${this.cur.entry.votes}</b> vote${this.cur.entry.votes === 1 ? '' : 's'}` : '<span class="muted">Vote on your phone!</span>';
+    if (v && this.cur?.entry) v.innerHTML = this.cur.entry.votes ? `${HEART()} <b>${this.cur.entry.votes}</b> vote${this.cur.entry.votes === 1 ? '' : 's'}` : '<span class="muted">Like it? Vote on your phone</span>';
   }
 
   miniCard(entry, big = false) {
@@ -481,9 +490,9 @@ export class Telephone {
     const node = document.createElement('div');
     node.className = `tpp-mini ${entry.kind} ${big ? 'big' : ''}`;
     if (entry.kind === 'text') {
-      node.innerHTML = `<div class="mt">${entry.missing ? '<em>😴</em>' : `“${esc(entry.text)}”`}</div><div class="mb">${avatar(p)}${esc(p?.name ?? '?')}</div>`;
+      node.innerHTML = `<div class="mt">${entry.missing ? '<em>(no answer)</em>' : `“${esc(entry.text)}”`}</div><div class="mb">${avatar(p)}<span>${esc(p?.name ?? '?')}</span>${entry.votes ? ` <span class="v">${HEART()}${entry.votes}</span>` : ''}</div>`;
     } else {
-      node.innerHTML = `<canvas width="${big ? 320 : 160}" height="${big ? 400 : 200}"></canvas><div class="mb">${avatar(p)}${esc(p?.name ?? '?')}${entry.votes ? ` <span class="v">❤️${entry.votes}</span>` : ''}</div>`;
+      node.innerHTML = `<canvas width="${big ? 320 : 160}" height="${big ? 400 : 200}"></canvas><div class="mb">${avatar(p)}<span>${esc(p?.name ?? '?')}</span>${entry.votes ? ` <span class="v">${HEART()}${entry.votes}</span>` : ''}</div>`;
       renderThumb(node.querySelector('canvas'), entry.ops);
     }
     return node;
@@ -505,13 +514,13 @@ export class Telephone {
       const c = this.miniCard(e, true);
       c.style.setProperty('--i', i);
       strip.appendChild(c);
-      if (i < chain.entries.length - 1) el('div', 'tpp-arrow', strip, '➜').style.setProperty('--i', i);
+      if (i < chain.entries.length - 1) el('div', 'tpp-arrow', strip, doodleSvg('arrow', '#23212e', 7)).style.setProperty('--i', i);
     });
     const first = chain.entries[0];
     const last = [...chain.entries].reverse().find((e) => e.kind === 'text' && !e.missing);
     el('div', 'tpp-summary', this.focusEl, last && last !== first
-      ? `From <b>“${esc(first.text)}”</b> to <b>“${esc(last.text)}”</b> 🤯`
-      : `What a journey! 🎢`);
+      ? `From <b>“${esc(first.text)}”</b> to <b>“${esc(last.text)}”</b>`
+      : 'What a journey!');
     sfx.play('powerup');
     const r = this.focusEl.getBoundingClientRect();
     this.G.env.confetti.burst(r.left + r.width / 2, r.top + r.height * 0.8, 50, 0.9);
@@ -525,7 +534,7 @@ export class Telephone {
     const topD = drawings[0]?.votes ? drawings[0] : null;
     const topT = texts[0]?.votes ? texts[0] : null;
     if (!topD && !topT) return;
-    this.titleEl.innerHTML = '🏅 Crowd favourites';
+    this.titleEl.innerHTML = 'Crowd favourites';
     this.trail.innerHTML = '';
     this.body.classList.add('overview');
     this.focusEl.innerHTML = '';
@@ -533,10 +542,10 @@ export class Telephone {
     const award = (e, title) => {
       const a = el('div', 'tpp-award', box, `<div class="aw-title">${title}</div>`);
       a.appendChild(this.miniCard(e, true));
-      el('div', 'aw-votes', a, `❤️ ${e.votes} vote${e.votes === 1 ? '' : 's'}`);
+      el('div', 'aw-votes', a, `${HEART()} ${e.votes} vote${e.votes === 1 ? '' : 's'}`);
     };
-    if (topD) award(topD, '🎨 Best drawing');
-    if (topT) award(topT, '💬 Best guess');
+    if (topD) award(topD, 'Best drawing');
+    if (topT) award(topT, 'Best caption');
     sfx.play('win');
     this.G.env.confetti.rain(160);
     this.G.refreshViews();

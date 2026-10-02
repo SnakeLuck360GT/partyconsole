@@ -144,7 +144,7 @@ export async function createSession(env, opts = {}) {
   s.fx = createFx(s);
 
   // ------------------------------------------------------------------ HUD
-  s.hud = createHud(root, { title, players, ...hud });
+  s.hud = createHud(root, { title, players, portraits: env.portraits || {}, ...hud });
   disposers.push(() => s.hud.destroy());
 
   /** Floating text that rises from a world position (DOM, crisp). */
@@ -178,13 +178,15 @@ export async function createSession(env, opts = {}) {
    */
   s.play = (seconds, { until, showTimer = true } = {}) => new Promise((resolve) => {
     if (s.aborted) { resolve(0); return; }
+    // Wall-clock timer: slow machines (low fps, dt clamped) must not stretch the round past `duration`.
     let t = 0;
+    const t0 = performance.now();
     let lastWhole = Math.ceil(seconds);
     let off = null;
     const done = () => { off?.(); signal?.removeEventListener('abort', done); s.hud.setTime(null); resolve(t); };
     signal?.addEventListener('abort', done, { once: true });
-    off = s.onFrame((dt) => {
-      t += dt;
+    off = s.onFrame(() => {
+      t = (performance.now() - t0) / 1000;
       s.elapsed = t;
       const left = Math.max(0, seconds - t);
       if (showTimer) s.hud.setTime(left, seconds);

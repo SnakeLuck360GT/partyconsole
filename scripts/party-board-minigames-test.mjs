@@ -27,8 +27,8 @@ let base = flags.url || process.env.SMOKE_URL;
 if (!base) {
   // Own Vite server with HMR off, so edits by other agents don't reload the page mid-test.
   const { createServer } = await import('vite');
-  const port = 5300 + Math.floor(Math.random() * 600);
-  server = await createServer({ root, configFile: resolve(root, 'vite.config.js'), logLevel: 'error', server: { port, strictPort: true, hmr: false, watch: null } });
+  const port = 5400 + Math.floor(Math.random() * 600);
+  server = await createServer({ root, configFile: resolve(root, 'scripts/party-board-vite.config.mjs'), logLevel: 'error', server: { port, strictPort: true, hmr: false, watch: null } });
   await server.listen();
   base = `http://localhost:${port}/`;
 }

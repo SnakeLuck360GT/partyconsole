@@ -12,7 +12,7 @@ export default {
   name: 'Pump It Up',
   instructions: 'Mash <b>A</b> to pump your balloon until it pops! Only pump on <b style="color:#4dff7a">GREEN</b>: pumping on <b style="color:#ff5a5a">RED</b> lets the air out.',
   mode: 'ffa',
-  minPlayers: 2,
+  minPlayers: 1,
   controls: { stick: 'none', buttons: [{ id: 'a', label: 'PUMP' }], hint: 'Mash <b>A</b> on green. Stop on red!' },
   duration: 40,
 
@@ -76,7 +76,7 @@ export default {
       const housing = new THREE.Mesh(new THREE.BoxGeometry(1.2, 3.2, 0.8), new THREE.MeshStandardMaterial({ color: 0x23252e, roughness: 0.5 }));
       tl.add(housing);
       const lampOff = [0x3a0d0d, 0x3a320d, 0x0d3a16].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.3 }));
-      const lampOn = [0xff2a2a, 0xffb000, 0x22ff55].map((c) => glowMat(c, 0.9));
+      const lampOn = [0xff1a1a, 0xffaa00, 0x10e040].map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.55, roughness: 0.3 }));
       const lamps = [0, 1, 2].map((i) => {
         const l = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 12), lampOff[i]);
         l.position.set(0, 1 - i * 1.0, 0.3);
@@ -137,9 +137,10 @@ export default {
       s.cam.set(new THREE.Vector3(0, 0, 1), Math.max(13, width * 1.05));
       s.cam.snap();
 
-      const edgeGlow = document.createElement('div');
-      edgeGlow.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:5;transition:box-shadow .15s;';
-      s.root.appendChild(edgeGlow);
+      // Big state sign under the timer: readable from the couch, no need to squint at the 3D light.
+      const sign = document.createElement('div');
+      sign.style.cssText = 'position:absolute;top:12vh;left:50%;transform:translateX(-50%);z-index:21;pointer-events:none;font-family:Figtree,system-ui,sans-serif;font-weight:800;font-size:7vmin;color:#fff;padding:.6vmin 5vmin;border-radius:2.4vmin;box-shadow:0 1vmin 0 #0004;transition:background .12s,opacity .2s;opacity:0';
+      s.root.appendChild(sign);
       let light = 'red'; // red | yellow | green
       let lightT = 0;
       let phase = 'intro';
@@ -150,11 +151,13 @@ export default {
         lamps.forEach((m, i) => { m.material = i === idx ? lampOn[i] : lampOff[i]; });
         lampLight.color.set([0xff3b3b, 0xffc21a, 0x3bff6a][idx]);
         lampLight.intensity = 25;
-        edgeGlow.style.boxShadow = `inset 0 0 6vmin 1.5vmin ${['#ff2a2acc', '#ffc21acc', '#2aff6acc'][idx]}`;
         tl.scale.setScalar(1.15);
         if (phase === 'play') {
-          if (l === 'green') { s.hud.note('<span style="color:#5dff8a">● PUMP!</span>', 900); sfx.play('go'); list.forEach((c) => s.status(c.id, '🟢 PUMP PUMP PUMP!')); }
-          if (l === 'red') { s.hud.note('<span style="color:#ff6a6a">● STOP!</span>', 900); sfx.play('wrong'); list.forEach((c) => s.status(c.id, '🔴 STOP! Don\'t pump!')); }
+          sign.style.opacity = 1;
+          sign.style.background = ['#e8262f', '#f0a400', '#14b04a'][idx];
+          sign.textContent = ['STOP!', 'CAREFUL…', 'PUMP!'][idx];
+          if (l === 'green') { sfx.play('go'); list.forEach((c) => { s.status(c.id, '<b style="color:#3ddc6a">GREEN</b> · pump pump pump!'); }); }
+          if (l === 'red') { sfx.play('wrong'); list.forEach((c) => { s.status(c.id, '<b style="color:#ff5a5a">RED</b> · stop pumping!'); s.vibrate(c.id, 'warn'); }); }
           if (l === 'yellow') sfx.play('blip');
         }
       }
@@ -174,8 +177,8 @@ export default {
         s.pop(p.clone().add(new THREE.Vector3(0, 1.2, 0)), popCount === 1 ? 'POP! 1st!' : `POP! #${popCount}`, '#fff', { size: 1.4 });
         c.cheer();
         s.vibrate(c.id, [60, 40, 120]);
-        s.status(c.id, `🎉 POP! You finished #${popCount}`);
-        s.hud.setScore(c.id, 100, { extra: popCount === 1 ? '🥇' : `#${popCount}` });
+        s.status(c.id, `POP! You finished #${popCount}`);
+        s.hud.setScore(c.id, 100, { extra: `#${popCount}` });
       }
 
       s.onFrame((dt, time) => {

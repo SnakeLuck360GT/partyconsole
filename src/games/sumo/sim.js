@@ -14,7 +14,7 @@ export const ARENA_RULES = {
   ice: { name: 'Icy Disc', accel: 8, friction: 1.1, kbFriction: 2.4, kbMul: 0.85, rest: 0.75 },
   crumble: { name: 'Crumbling Ruins', accel: 34, friction: 18, kbFriction: 8.5, kbMul: 1, rest: 0.45 },
   spinner: { name: 'Spin Cycle', accel: 32, friction: 16, kbFriction: 8, kbMul: 1, rest: 0.5 },
-  mushroom: { name: 'Bouncy Mushroom', accel: 30, friction: 14, kbFriction: 7, kbMul: 1.2, rest: 1.25 },
+  mushroom: { name: 'Bouncy Mushroom', accel: 30, friction: 14, kbFriction: 7.5, kbMul: 1.1, rest: 1.1 },
 };
 export const ARENA_ORDER = ['dohyo', 'ice', 'crumble', 'spinner', 'mushroom'];
 
@@ -23,6 +23,7 @@ export function arenaRadius(n) {
   return 5 + 1.2 * Math.sqrt(Math.max(2, n));
 }
 
+const NO_INPUT = Object.freeze({ x: 0, y: 0, dash: false, slam: false });
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
@@ -61,6 +62,8 @@ export function createSim({ emit }) {
   };
   let puId = 0;
   let hzId = 0;
+  sim._list = [];
+  sim._alive = [];
 
   // ---------------------------------------------------------------- arena
 
@@ -193,6 +196,22 @@ export function createSim({ emit }) {
   }
   sim.resetFighter = resetFighter;
 
+  /** Take a fighter out of the round without a ring-out (player disconnected). */
+  sim.withdraw = function withdraw(f) {
+    if (f.state === 'idle') return;
+    f.state = 'out';
+    f.charging = false;
+    f.dashT = 0;
+    f.vx = f.vz = f.vy = 0;
+    // nobody gets KO credit for a disconnect; anyone this player last hit keeps theirs
+  };
+
+  sim.aliveCount = function aliveCount() {
+    let n = 0;
+    for (const f of sim.fighters.values()) if (f.state === 'alive') n++;
+    return n;
+  };
+
   sim.spawnFromSky = function spawnFromSky(f) {
     resetFighter(f);
     const [x, z] = sim.randomFreeSpot(0.55);
@@ -255,8 +274,12 @@ export function createSim({ emit }) {
     a.rot += a.spin * dt;
     a.armAngle += a.armSpeed * dt;
 
-    const list = [...sim.fighters.values()];
-    const alive = list.filter((f) => f.state === 'alive');
+    // reused scratch arrays (no per-frame allocation)
+    const list = sim._list;
+    const alive = sim._alive;
+    list.length = 0;
+    alive.length = 0;
+    for (const f of sim.fighters.values()) { list.push(f); if (f.state === 'alive') alive.push(f); }
 
     // --- per-fighter control + integration
     for (const f of list) {
@@ -281,7 +304,7 @@ export function createSim({ emit }) {
       }
       if (f.state !== 'alive') continue;
 
-      const inp = f.active ? getInput(f) : { x: 0, y: 0, dash: false, slam: false };
+      const inp = f.active ? getInput(f) : NO_INPUT;
       f.dashCd -= dt; f.slamCd -= dt; f.stun -= dt; f.invuln -= dt; f.armCd -= dt; f.hitFlash -= dt;
       if (f.power) { f.powerT -= dt; if (f.powerT <= 0) clearPower(f); }
       const targetScale = f.power === 'mega' ? 1.6 : 1;
@@ -362,7 +385,7 @@ export function createSim({ emit }) {
       // mushroom dome pushes outward gently
       if (a.type === 'mushroom' && !f.airborne) {
         const r = Math.hypot(f.x, f.z) || 1;
-        const push = 2.2 * (r / a.Reff);
+        const push = 1.3 * (r / a.Reff);
         f.vx += (f.x / r) * push * dt;
         f.vz += (f.z / r) * push * dt;
       }
@@ -527,7 +550,7 @@ export function createSim({ emit }) {
     const ddz = att.dashDir[1] * 0.55 + dz * 0.45;
     const feather = att.power === 'feather' ? 1.3 : 1;
     const mega = att.power === 'mega' ? 1.35 : 1;
-    const kb = (7 + tgt.damage * 0.105) * feather * mega * Math.sqrt(att.mass);
+    const kb = (6 + tgt.damage * 0.08) * feather * mega * Math.sqrt(att.mass);
     const dmg = 9 + Math.round(Math.random() * 3) + (att.power === 'spikes' ? 6 : 0) + (att.power === 'mega' ? 4 : 0);
     const k = knock(tgt, ddx, ddz, kb, dmg, att.id, { dash: true });
     // recoil: attacker stops dead
@@ -548,7 +571,7 @@ export function createSim({ emit }) {
       const d = Math.hypot(dx, dz);
       if (d > radius + o.radius) continue;
       const fall = 1 - Math.min(1, d / (radius + o.radius)) * 0.55;
-      const kb = (5 + 8.5 * c + o.damage * (0.045 + 0.06 * c)) * fall * (f.power === 'mega' ? 1.4 : 1);
+      const kb = (4.5 + 7.5 * c + o.damage * (0.04 + 0.05 * c)) * fall * (f.power === 'mega' ? 1.4 : 1);
       if (o.power === 'spikes' && f.power !== 'spikes') continue;
       if (knock(o, d > 0.01 ? dx : 1, d > 0.01 ? dz : 0, kb, Math.round(4 + 9 * c), f.id, { slam: true })) hits++;
     }
@@ -610,11 +633,10 @@ export function createSim({ emit }) {
       const n = 1 + Math.floor(sim.fighters.size / 7) + (sim.suddenDeath ? 1 : 0);
       for (let k = 0; k < n; k++) {
         // target a random living fighter's area, or a random spot
-        const pool = alive.filter((f) => f.state === 'alive');
         let x;
         let z;
-        if (pool.length && Math.random() < 0.6) {
-          const f = pool[Math.floor(Math.random() * pool.length)];
+        const f = alive.length ? alive[Math.floor(Math.random() * alive.length)] : null;
+        if (f && f.state === 'alive' && Math.random() < 0.6) {
           x = f.x + rand(-1.2, 1.2) + f.vx * 0.6;
           z = f.z + rand(-1.2, 1.2) + f.vz * 0.6;
         } else {
@@ -691,7 +713,8 @@ export function createSim({ emit }) {
   sim.botInput = function botInput(f) {
     const a = sim.arena;
     const ai = f.ai;
-    const out = { x: 0, y: 0, dash: false, slam: ai.holdSlam > 0 };
+    const out = ai.out || (ai.out = { x: 0, y: 0, dash: false, slam: false });
+    out.x = 0; out.y = 0; out.dash = false; out.slam = ai.holdSlam > 0;
     const r = Math.hypot(f.x, f.z);
     // pick target
     let best = null;
@@ -711,8 +734,9 @@ export function createSim({ emit }) {
     const pu = sim.powerups[0];
     if (pu && Math.hypot(pu.x - f.x, pu.z - f.z) < 4) { tx = pu.x - f.x; tz = pu.z - f.z; }
     // stay away from the edge / holes
-    const lookX = f.x + f.vx * 0.35;
-    const lookZ = f.z + f.vz * 0.35;
+    const look = a.type === 'ice' ? 0.9 : 0.4;
+    const lookX = f.x + f.vx * look;
+    const lookZ = f.z + f.vz * look;
     const danger = !sim.solidAt(lookX, lookZ) || r > a.Reff * 0.78;
     if (danger) { tx = -f.x * 3; tz = -f.z * 3; }
     // avoid hazard warnings

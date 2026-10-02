@@ -12,7 +12,7 @@ export default {
   name: 'Paint Party',
   instructions: 'Run around to paint the floor in your colour. Press <b>A</b> to throw a paint bomb! You\'re faster on your own paint. Most floor wins.',
   mode: 'ffa',
-  minPlayers: 2,
+  minPlayers: 1,
   controls: { stick: 'analog', buttons: [{ id: 'a', label: 'SPLAT' }], hint: 'Move to paint · <b>A</b> paint bomb' },
   duration: 40,
 
@@ -81,8 +81,9 @@ export default {
 
       let dirty = false;
       const toCell = (x) => Math.floor(((x + HALF) / (HALF * 2)) * RES);
+      const toRow = (z) => toCell(-z); // the box's top-face UVs run opposite to world z
       function paint(x, z, radius, pi) {
-        const ci = toCell(x); const cj = toCell(z);
+        const ci = toCell(x); const cj = toRow(z);
         const rc = Math.ceil((radius / (HALF * 2)) * RES);
         const [r, g, b] = rgb[pi];
         for (let j = cj - rc; j <= cj + rc; j++) {
@@ -106,7 +107,7 @@ export default {
         dirty = true;
       }
       counts[0] = RES * RES;
-      const ownerAt = (x, z) => { const i = toCell(x); const j = toCell(z); return i < 0 || j < 0 || i >= RES || j >= RES ? 0 : owner[j * RES + i]; };
+      const ownerAt = (x, z) => { const i = toCell(x); const j = toRow(z); return i < 0 || j < 0 || i >= RES || j >= RES ? 0 : owner[j * RES + i]; };
 
       // paint bombs
       const bombGeo = new THREE.SphereGeometry(0.28, 14, 10);

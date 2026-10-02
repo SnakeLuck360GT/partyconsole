@@ -26,7 +26,7 @@ export default {
   name: 'Crate Smash',
   instructions: 'Run up to crates and press <b>A</b> to smash them! Wooden +1, golden +5 (takes 3 hits). Avoid the <b style="color:#ff5a4a">TNT</b>!',
   mode: 'ffa',
-  minPlayers: 2,
+  minPlayers: 1,
   controls: { stick: 'analog', buttons: [{ id: 'a', label: 'SMASH' }], hint: 'Move · <b>A</b> to smash crates' },
   duration: 40,
 
@@ -125,7 +125,7 @@ export default {
             if (c.pts > 0) { const lose = Math.min(2, c.pts); c.pts -= lose; s.hud.setScore(c.id, c.pts); s.pop(c.pos.clone().setY(2.4), `-${lose}`, '#ff6a6a'); }
           }
         }
-        if (by) s.status(by.id, '💥 Ouch, TNT!');
+        if (by) s.status(by.id, 'Ouch, TNT!');
       }
       function smash(c) {
         c.action('punch', 0.32, 2.2);

@@ -4,6 +4,7 @@ const params = new URLSearchParams(typeof location !== 'undefined' ? location.se
 export const DEBUG = {
   fast: params.has('pbfast') ? Number(params.get('pbfast')) || 4 : 1, // animation/timer speed multiplier
   turns: Number(params.get('pbturns')) || 0, // skip the admin's turn-count pick
+  setup: params.has('pbsetup'), // show the length picker anyway (the pick is then overridden by pbturns)
   seed: params.has('pbseed') ? Number(params.get('pbseed')) : null,
   minigame: params.get('pbmg') || null, // force a minigame id
   board: params.get('pbboard') || null,

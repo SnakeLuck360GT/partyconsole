@@ -21,23 +21,22 @@ const CSS = `
 .kx-v{position:absolute;overflow:hidden;--c:#fff}
 .kx-frame{position:absolute;inset:0;box-shadow:inset 0 0 0 calc(var(--u)*0.45) color-mix(in srgb,var(--c) 85%,transparent),inset 0 0 calc(var(--u)*6) color-mix(in srgb,var(--c) 22%,transparent)}
 .kx.solo .kx-frame,.kx.solo .kx-name{display:none}
-.kx-name{position:absolute;top:calc(var(--u)*2.2);left:50%;transform:translateX(-50%);white-space:nowrap;display:flex;align-items:center;gap:calc(var(--u)*0.8);padding:calc(var(--u)*0.5) calc(var(--u)*1.6) calc(var(--u)*0.5) calc(var(--u)*0.6);
+.kx-name{position:absolute;top:calc(var(--u)*2.2);left:50%;transform:translateX(-50%);white-space:nowrap;padding:calc(var(--u)*0.4) calc(var(--u)*1.8);
   border-radius:999px;background:color-mix(in srgb,var(--c) 80%,#000);font-weight:600;font-size:calc(var(--u)*3.2);box-shadow:0 calc(var(--u)*0.4) 0 rgba(0,0,0,.25)}
-.kx-name i{font-style:normal;width:1.5em;height:1.5em;border-radius:50%;background:rgba(255,255,255,.9);display:grid;place-items:center;font-size:.8em}
 .kx-lap{position:absolute;top:calc(var(--u)*2);left:calc(var(--u)*2.4);line-height:.9;text-shadow:0 calc(var(--u)*.35) 0 rgba(0,0,0,.35),0 0 calc(var(--u)*2) rgba(0,0,0,.35)}
 .kx-lap small{display:block;font-size:calc(var(--u)*3);font-weight:600;letter-spacing:.12em;opacity:.95}
 .kx-lap b{font-family:Unbounded,Fredoka,sans-serif;font-weight:800;font-size:calc(var(--u)*8);font-style:italic;letter-spacing:-.02em}
 .kx-lap b span{font-size:.55em;opacity:.85}
 .kx-lap em{display:block;font-style:normal;font-size:calc(var(--u)*2.7);font-weight:500;margin-top:calc(var(--u)*.6);font-variant-numeric:tabular-nums;opacity:.92}
 .kx-lap.pop b{animation:kxpop .6s cubic-bezier(.2,1.8,.4,1)}
-.kx-item{position:absolute;top:calc(var(--u)*2.2);left:calc(var(--u)*22);width:calc(var(--u)*13);height:calc(var(--u)*13);border-radius:calc(var(--u)*3.2);
-  background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.35),rgba(255,255,255,.08) 60%),rgba(10,14,40,.55);
-  box-shadow:inset 0 0 0 calc(var(--u)*.6) rgba(255,255,255,.85),0 calc(var(--u)*.5) 0 rgba(0,0,0,.3);display:grid;place-items:center}
+.kx-item{position:absolute;top:calc(var(--u)*2.2);left:calc(var(--u)*20);width:calc(var(--u)*13);height:calc(var(--u)*13);border-radius:calc(var(--u)*3);
+  background:rgba(8,10,28,.32);box-shadow:inset 0 0 0 calc(var(--u)*.45) rgba(255,255,255,.55);display:grid;place-items:center;transition:background .15s}
+.kx-item.has{background:rgba(255,255,255,.9);box-shadow:inset 0 0 0 calc(var(--u)*.55) #fff,0 calc(var(--u)*.5) 0 rgba(0,0,0,.28)}
 .kx-item svg{width:78%;height:78%;filter:drop-shadow(0 calc(var(--u)*.3) 0 rgba(0,0,0,.35))}
 .kx-item.roll svg{animation:kxroll .09s linear infinite}
 .kx-item.got{animation:kxpop .5s cubic-bezier(.2,1.8,.4,1)}
 .kx-item b{position:absolute;right:-12%;bottom:-10%;background:#ffcc00;color:#222;border-radius:999px;font-size:calc(var(--u)*3);padding:0 .45em;box-shadow:0 2px 0 rgba(0,0,0,.3)}
-.kx-item.held{box-shadow:inset 0 0 0 calc(var(--u)*.6) #7dffb0,0 0 calc(var(--u)*3) #7dffb0}
+.kx-item.held{background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 calc(var(--u)*.55) #fff}
 .kx-coins{position:absolute;left:calc(var(--u)*2.4);bottom:calc(var(--u)*2.4);display:flex;align-items:center;gap:calc(var(--u)*.8);font-family:Unbounded,Fredoka,sans-serif;font-weight:800;font-style:italic;
   font-size:calc(var(--u)*5);text-shadow:0 calc(var(--u)*.35) 0 rgba(0,0,0,.4)}
 .kx-coins svg{width:1.05em;height:1.05em}
@@ -79,6 +78,11 @@ const CSS = `
 .kx-fin span{display:block;font-size:calc(var(--u)*5);font-weight:600;margin-top:calc(var(--u)*1);text-shadow:0 2px 6px rgba(0,0,0,.6)}
 .kx-hint{position:absolute;left:50%;top:calc(var(--u)*20);transform:translateX(-50%);padding:calc(var(--u)*.8) calc(var(--u)*2.4);border-radius:999px;background:rgba(10,12,30,.72);font-size:calc(var(--u)*3);white-space:nowrap;display:none}
 .kx-hint.on{display:block}
+.kx.shared .kx-item,.kx.shared .kx-coins,.kx.shared .kx-pos,.kx.shared .kx-drift,.kx.shared .kx-name,.kx.shared .kx-frame,.kx.shared .kx-speed,.kx.shared .kx-ww,.kx.shared .kx-fin,.kx.shared .kx-hint{display:none!important}
+.kx.shared .kx-map3{background:rgba(10,12,34,.72);border-radius:calc(var(--u)*3)}
+.kx.shared .kx-map3 .st{font-size:calc(var(--u)*4.3);gap:calc(var(--u)*.6);top:6%}
+.kx.shared .kx-map3 h3{display:none}
+.kx.shared .kx-count span{font-size:calc(var(--u)*24)}
 .kx-div{position:absolute;background:#0b0d1a;z-index:2}
 .kx-map3{position:absolute;overflow:hidden;background:radial-gradient(circle at 30% 20%,#2a2f6a,#0d0f24 70%);display:none}
 .kx-map3.on{display:block}
@@ -87,6 +91,7 @@ const CSS = `
 .kx-map3 .st div{display:flex;align-items:center;gap:.5em;padding:.15em .6em .15em .2em;border-radius:999px;background:rgba(255,255,255,.08)}
 .kx-map3 .st div.h{background:color-mix(in srgb,var(--c) 70%,#000)}
 .kx-map3 .st b{width:1.6em;text-align:center;font-family:Unbounded,Fredoka,sans-serif;font-style:italic}
+.kx-map3 .st i{font-style:normal;font-size:.7em;font-weight:700;background:#fff;color:#111;border-radius:999px;padding:0 .5em}
 .kx-map3 .st span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kx-map3 h3{position:absolute;left:4%;top:2%;margin:0;font-size:calc(var(--u)*3.2);opacity:.75;font-weight:500}
 .kx-title{position:absolute;left:0;right:0;bottom:12%;display:flex;flex-direction:column;align-items:center;gap:1vh;animation:kxslide .8s cubic-bezier(.2,1.2,.4,1)}
@@ -138,6 +143,11 @@ const CSS = `
 .kx-slot .bars em{height:.75vh;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
 .kx-slot .bars s{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#ffcc00,#ff7a1a);transition:width .3s}
 .kx-slot .rd{margin-top:.4vh;font-weight:700;font-size:min(1.2vw,2.2vh);color:#aab}
+.kx-slots.many .kx-slot{width:min(11.6vw,21vh);padding:.5vh .5vw .7vh}
+.kx-slots.many .kx-slot .bars{display:none}
+.kx-slots.many .kx-slot .nm{font-size:min(1.15vw,2.1vh)}
+.kx-slots.many .kx-slot .dk{font-size:min(.95vw,1.7vh)}
+.kx-slots.many .kx-slot .dk i{display:none}
 .kx-slot.ready{box-shadow:inset 0 0 0 3px #5dff7a,0 0 3vh rgba(93,255,122,.35)}
 .kx-slot.ready .rd{color:#5dff7a}
 .kx-lobby .kx-extra{position:absolute;left:0;right:0;bottom:3vh;margin:0}
@@ -146,9 +156,9 @@ const CSS = `
 .kx-places .row{display:grid;grid-template-columns:5vh 7vh 1fr auto auto;align-items:center;gap:1.4vw;padding:.6vh 1.2vw;margin:.7vh 0;border-radius:1.4vh;background:rgba(255,255,255,.07);
   font-size:min(2vw,3.4vh);animation:kxslide .5s both}
 .kx-places .row.h{background:linear-gradient(90deg,color-mix(in srgb,var(--c) 70%,#000),rgba(255,255,255,.06));box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--c) 70%,#fff)}
-.kx-places .row.cpu{opacity:.5;filter:grayscale(.6)}
+.kx-places .row.cpu{opacity:.8}
 .kx-places .row .p{font-family:Unbounded,Fredoka,sans-serif;font-weight:800;font-style:italic;font-size:1.3em;text-align:center}
-.kx-places .row img,.kx-places .row .ph{width:6.5vh;height:6.5vh;border-radius:1vh;background:#2a2f5a;object-fit:cover}
+.kx-places .row img,.kx-places .row .ph{width:6.5vh;height:6.5vh;border-radius:1vh;background:#3b2f8c;object-fit:cover;object-position:50% 20%}
 .kx-places .row .tm{font-variant-numeric:tabular-nums;color:#dde}
 .kx-places .row .pt{font-weight:700;color:#ffcc00;min-width:4.5em;text-align:right}
 @keyframes kxpop{from{transform:scale(.3)}}
@@ -202,10 +212,10 @@ class ViewHud {
 
   show(on) { this.el.style.display = on ? '' : 'none'; }
 
-  player(name, color, avatar) {
+  player(name, color) {
     if (!this.set('player', name + color)) return;
     this.el.style.setProperty('--c', color);
-    this.name.innerHTML = `<i>${escapeHtml(avatar || '🏎️')}</i>${escapeHtml(name)}`;
+    this.name.textContent = name;
   }
 
   lap(n, total, time) {
@@ -242,6 +252,7 @@ class ViewHud {
     this.itemEl.innerHTML = ITEM_SVG[shown] + (!rolling && count > 1 ? `<b>×${count}</b>` : '');
     this.itemEl.classList.toggle('roll', rolling);
     this.itemEl.classList.toggle('held', !!held);
+    this.itemEl.classList.toggle('has', shown !== 'empty' && !held);
     if (wasRolling && !rolling && item) { this.itemEl.classList.remove('got'); void this.itemEl.offsetWidth; this.itemEl.classList.add('got'); }
   }
 
@@ -309,8 +320,9 @@ export function createHud(container) {
   return {
     root,
     views,
-    layout(rects, W, H, mapRect) {
+    layout(rects, W, H, mapRect, { shared = false } = {}) {
       root.classList.toggle('solo', rects.length === 1);
+      root.classList.toggle('shared', shared);
       views.forEach((v, i) => {
         if (rects[i]) { v.layout(rects[i], W, H); v.show(true); } else v.show(false);
       });
@@ -365,7 +377,7 @@ export function createHud(container) {
       const key = ranking.map((k) => k.id + (k.finished ? 'f' : '')).join();
       if (map3.dataset.key !== key) {
         map3.dataset.key = key;
-        map3.querySelector('.st').innerHTML = ranking.map((k, i) => `<div class="${k.human ? 'h' : ''}" style="--c:${k.racer.color}"><b>${i + 1}</b><span>${escapeHtml(k.racer.name)}</span>${k.finished ? '🏁' : ''}</div>`).join('');
+        map3.querySelector('.st').innerHTML = ranking.map((k, i) => `<div class="${k.human ? 'h' : ''}" style="--c:${k.racer.color}"><b>${i + 1}</b><span>${escapeHtml(k.racer.name)}</span>${k.finished ? '<i>FIN</i>' : ''}</div>`).join('');
       }
     },
     title(name, sub, ribbon) {

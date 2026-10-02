@@ -59,19 +59,29 @@ const words = [...all].sort();
 writeFileSync(resolve(OUT, 'words.txt'), words.join('\n') + '\n');
 
 // ---- prompts
+// Difficulty = geometric mean of two counts over the "core" set:
+//   all: core words containing the sequence (captures easy inflections: -ds, -ts, -ed …)
+//   base: short (3-7 letter) core words that aren't obvious inflections (what people actually think of)
+// so a sequence only counts as easy when it shows up in plenty of everyday short words too ("nb", "uo" don't).
 const core = [...enable].filter((w) => wordnik.has(w)).concat(extra);
-const counts = new Map();
-for (const w of core) {
-  const seen = new Set();
-  for (let len = 2; len <= 3; len++) for (let i = 0; i + len <= w.length; i++) seen.add(w.slice(i, i + len));
-  for (const s of seen) counts.set(s, (counts.get(s) || 0) + 1);
-}
+const countSeqs = (list) => {
+  const m = new Map();
+  for (const w of list) {
+    const seen = new Set();
+    for (let len = 2; len <= 3; len++) for (let i = 0; i + len <= w.length; i++) seen.add(w.slice(i, i + len));
+    for (const s of seen) m.set(s, (m.get(s) || 0) + 1);
+  }
+  return m;
+};
+const allCounts = countSeqs(core);
+const baseCounts = countSeqs(core.filter((w) => w.length >= 3 && w.length <= 7 && !/(s|ed|ing|er|est|ly)$/.test(w)));
 const tiers = { easy: [], medium: [], hard: [] };
-for (const [s, n] of counts) {
+for (const [s, n] of allCounts) {
   if (BAD_PROMPTS.has(s)) continue;
-  if (n >= 1000) tiers.easy.push(s);
-  else if (n >= 300) tiers.medium.push(s);
-  else if (n >= 100) tiers.hard.push(s);
+  const score = Math.sqrt(n * (baseCounts.get(s) || 0));
+  if (score >= 500) tiers.easy.push(s);
+  else if (score >= 200) tiers.medium.push(s);
+  else if (score >= 80) tiers.hard.push(s);
 }
 for (const k of Object.keys(tiers)) tiers[k].sort();
 writeFileSync(resolve(OUT, 'prompts.json'), JSON.stringify(tiers));

@@ -5,14 +5,18 @@ import { FX, drawBackdrop, superellipsePoints } from './render.js';
 import { createAudio } from './audio.js';
 import { SCREEN_CSS } from './screen-style.js';
 import { isOffensive, displayWord } from './blocklist.js';
-import { BONUS_LETTERS, BONUS_EXCLUDE, MAX_HEARTS, startHearts, HEART_SVG, highlight } from './common.js';
+import { BONUS_LETTERS, BONUS_EXCLUDE, MAX_HEARTS, startHearts, HEART_SVG, highlight, initials, onColorRgb } from './common.js';
 
 const MIN_TURN_MS = 2500; // a player always gets at least this long after receiving the bomb
 const LONELY_MS = 15000; // multiplayer game with only one connected survivor ends after this
 const PAUSE_MS = 30000; // nobody connected to play: give up after this
+const FORFEIT_MS = 30000; // a player gone this long mid-game is out (so they can't 'survive' while away)
 // ?wbfast=1 on screen.html: short fuses + a state peek for automated tests (scripts/word-bomb-test.mjs)
 const FAST = /[?&]wbfast=1/.test(location.search);
 const rand = (a, b) => a + Math.random() * (b - a);
+const LEVELS = ['Warm-up', 'Medium', 'Hard', 'Brutal'];
+// prompt tier odds [easy, medium, hard] per level
+const TIER_ODDS = [[0.9, 0.1, 0], [0.5, 0.45, 0.05], [0.25, 0.5, 0.25], [0.1, 0.4, 0.5]];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 function el(tag, cls, parent, html) {
@@ -43,7 +47,7 @@ export default async function start(ctx) {
   const promptEl = el('div', 'wb-prompt', shakeEl);
   const pillEl = el('div', 'wb-pill hidden', shakeEl);
   const hintEl = el('div', 'wb-hint', shakeEl);
-  el('div', 'wb-logo', root, `<div class="t">💣 WORD BOMB</div><div class="s" id="wb-sub"></div>`);
+  el('div', 'wb-logo', root, `<div class="t">Word Bomb</div><div class="s" id="wb-sub"></div>`);
   const subEl = root.querySelector('#wb-sub');
   const feedEl = el('div', 'wb-feed', root);
   const statusEl = el('div', 'wb-status', root);
@@ -62,6 +66,7 @@ export default async function start(ctx) {
   let prompt = '';
   let turnId = 0;
   let turnCount = 0;
+  let progress = 0; // rounds played: +1/alive per new prompt
   let explosions = 0;
   let elimCounter = 0;
   let heartsAtStart = 2;
@@ -83,6 +88,7 @@ export default async function start(ctx) {
   let shake = 0;
   let gen = 0; // bumps on restart/destroy to cancel pending async steps
   let destroyed = false;
+  let testFreeze = false; // ?wbfast=1 only: hold the fuse while a test types
   let layout = null;
   let waitOverlay = null;
   const timers = new Set();
@@ -96,7 +102,7 @@ export default async function start(ctx) {
 
   // ------------------------------------------------------------ roster
   function makeEntry(p) {
-    return { id: p.id, player: p, hearts: heartsAtStart, alive: true, connected: p.connected !== false, letters: new Set(), words: [], longest: '', elimOrder: 0, el: null };
+    return { id: p.id, player: p, hearts: heartsAtStart, alive: true, connected: p.connected !== false, dcSince: 0, forfeit: false, letters: new Set(), words: [], longest: '', elimOrder: 0, el: null };
   }
 
   function resetGame() {
@@ -117,6 +123,7 @@ export default async function start(ctx) {
     prompt = '';
     typing = '';
     turnCount = 0;
+    progress = 0;
     explosions = 0;
     elimCounter = 0;
     used = new Set();
@@ -135,6 +142,8 @@ export default async function start(ctx) {
     renderHud();
   }
 
+  const round = () => Math.floor(progress);
+  const level = () => (progress < 2 ? 0 : progress < 5 ? 1 : progress < 9 ? 2 : 3);
   const aliveList = () => order.map((id) => roster.get(id)).filter((r) => r.alive);
   const connectedAlive = () => aliveList().filter((r) => r.connected);
 
@@ -153,7 +162,7 @@ export default async function start(ctx) {
     const cx = W / 2;
     const cy = H * 0.53;
     let specs;
-    if (n <= 18) specs = [{ a: W * 0.39, b: H * 0.345, n: 2, count: n, phase: n <= 2 ? 0.5 : 0 }];
+    if (n <= 18) specs = [{ a: W * 0.39, b: H * 0.345, n: 2, count: n, phase: n === 1 ? 0.75 : n === 2 ? 0.25 : 0 }];
     else if (n <= 30) specs = [{ a: W * 0.43, b: H * 0.37, n: 2.8, count: n, phase: 0 }];
     else {
       const outer = Math.ceil(n * 0.58);
@@ -213,12 +222,13 @@ export default async function start(ctx) {
       const r = roster.get(id);
       const p = r.player;
       r.el = el('div', 'wb-seat', seatsEl, `
-        <div class="wb-av"><div class="wb-ring"></div><span class="wb-emoji">${p.avatar}</span><span class="wb-skull">💀</span><span class="wb-dc">📵</span></div>
+        <div class="wb-av"><div class="wb-ring"></div><span class="wb-ini">${escapeHtml(initials(p.name))}</span><span class="wb-tag out">OUT</span><span class="wb-tag off">AWAY</span></div>
         <div class="wb-name">${escapeHtml(p.name)}</div>
         <div class="wb-hearts"></div>
         <div class="wb-prog"><i></i></div>
         <div class="wb-bubble"></div>`);
       r.el.style.setProperty('--c', p.color);
+      r.el.style.setProperty('--on', onColor(p.color));
       r.heartsShown = null;
       renderSeat(r);
     }
@@ -251,6 +261,7 @@ export default async function start(ctx) {
       r.heartsShown = key;
     }
     r.el.querySelector('.wb-prog i').style.width = `${(r.letters.size / BONUS_LETTERS.length) * 100}%`;
+    r.el.querySelector('.wb-prog').style.opacity = r.letters.size && r.alive ? 1 : 0;
   }
 
   function flashSeat(r, cls, ms = 800) {
@@ -264,13 +275,10 @@ export default async function start(ctx) {
   function renderHud() {
     const alive = aliveList().length;
     subEl.innerHTML = practice ? 'Practice mode · <b>survive!</b>' : `<b>${alive}</b> of ${order.length} still standing`;
-    const t = turnCount;
-    const diff = t < 6 ? ['Warm-up', 1] : t < 16 ? ['Medium', 2] : t < 32 ? ['Hard', 3] : ['Brutal', 4];
-    statusEl.innerHTML = `
-      <div class="chip bonus">🔤 Use every letter <b>A–Z</b> (except ${BONUS_EXCLUDE.toUpperCase().split('').join(' ')}) for <b>+1 ❤️</b></div>
-      <div class="chip">Turn <b>${Math.max(1, t)}</b> · ${diff[0]} ${'🌶️'.repeat(diff[1])}</div>`;
+    const lvl = level();
+    statusEl.innerHTML = phase === 'intro' ? '' : `Round <b>${round() + 1}</b><br>${LEVELS[lvl]}<span class="lvl">${LEVELS.map((_, i) => `<i class="${i <= lvl ? 'on' : ''}"></i>`).join('')}</span>`;
     const specs = [...spectators.values()].filter((p) => p.connected !== false);
-    specsEl.textContent = specs.length ? `👀 Joining next game: ${specs.map((p) => `${p.avatar} ${p.name}`).join(', ')}` : '';
+    specsEl.innerHTML = specs.length ? `Joining next game: <b>${specs.map((p) => escapeHtml(p.name)).join(', ')}</b>` : '';
   }
 
   function setPrompt(p) {
@@ -283,16 +291,12 @@ export default async function start(ctx) {
     if (!r || phase !== 'play') { pillEl.classList.add('hidden'); return; }
     pillEl.classList.remove('hidden');
     pillEl.style.setProperty('--c', r.player.color);
-    const shown = typing ? (isOffensive(typing) ? '✱'.repeat(typing.length) : typing) : '';
+    pillEl.style.setProperty('--on', onColor(r.player.color));
+    const shown = typing ? (isOffensive(typing) ? '•'.repeat(typing.length) : typing) : '';
     const txt = shown
       ? `${highlight(shown, prompt)}<span class="caret"></span>`
       : `<span class="ph">${escapeHtml(r.player.name)} is thinking…</span>`;
-    pillEl.innerHTML = `<span class="av">${r.player.avatar}</span><span class="txt">${txt}</span>`;
-    const bub = r.el?.querySelector('.wb-bubble');
-    if (bub) {
-      bub.innerHTML = shown ? highlight(shown, prompt) : '…';
-      bub.classList.add('show');
-    }
+    pillEl.innerHTML = `<span class="av">${escapeHtml(initials(r.player.name))}</span><span class="txt">${txt}</span>`;
   }
 
   function clearBubbles() {
@@ -318,11 +322,10 @@ export default async function start(ctx) {
   }
 
   function addFeed(r, word, p) {
-    const row = el('div', 'row', null, `<span>${r.player.avatar}</span><b>${highlight(displayWord(word), isOffensive(word) ? '' : p)}</b>`);
+    const row = el('div', 'row', null, `<i></i><b>${highlight(displayWord(word), isOffensive(word) ? '' : p)}</b>`);
     row.style.setProperty('--c', r.player.color);
-    if (!feedEl.querySelector('.h')) el('div', 'h', feedEl, 'Recent words');
-    feedEl.insertBefore(row, feedEl.children[1] || null);
-    while (feedEl.children.length > 6) feedEl.lastChild.remove();
+    feedEl.insertBefore(row, feedEl.firstChild);
+    while (feedEl.children.length > 5) feedEl.lastChild.remove();
   }
 
   function addFloater(word) {
@@ -368,10 +371,11 @@ export default async function start(ctx) {
       practice,
       prompt: prompt.toUpperCase(),
       turnId,
-      holder: h && (phase === 'play' || phase === 'boom') ? { id: h.id, name: h.player.name, avatar: h.player.avatar, color: h.player.color } : null,
+      holder: h && (phase === 'play' || phase === 'boom') ? { id: h.id, name: h.player.name, color: h.player.color } : null,
       you: r
-        ? { hearts: r.hearts, slots: Math.max(heartsAtStart, r.hearts), alive: r.alive, letters: [...r.letters].join(''), words: r.words.length, spectator: false }
+        ? { hearts: r.hearts, slots: Math.max(heartsAtStart, r.hearts), alive: r.alive, forfeit: r.forfeit, letters: [...r.letters].join(''), words: r.words.length, longest: r.longest, spectator: false }
         : { spectator: true },
+      winner: phase === 'over' && !practice ? (() => { const w = ranking()[0]; return w ? { id: w.id, name: w.player.name, color: w.player.color } : null; })() : null,
       bonus: BONUS_LETTERS,
       alive: aliveList().length,
       total: order.length,
@@ -385,8 +389,7 @@ export default async function start(ctx) {
 
   // ------------------------------------------------------------ game flow
   function pickPrompt() {
-    const t = turnCount;
-    const w = t < 6 ? [0.9, 0.1, 0] : t < 16 ? [0.55, 0.4, 0.05] : t < 32 ? [0.3, 0.5, 0.2] : [0.15, 0.45, 0.4];
+    const w = TIER_ODDS[level()];
     const x = Math.random();
     const tier = x < w[0] ? prompts.easy : x < w[0] + w[1] ? prompts.medium : prompts.hard;
     let p = '';
@@ -437,6 +440,7 @@ export default async function start(ctx) {
     pillEl.classList.remove('bad');
     if (newPrompt) {
       turnCount++;
+      if (turnCount > 1) progress += 1 / Math.max(3, aliveList().length);
       prompt = pickPrompt();
       setPrompt(prompt);
     }
@@ -475,6 +479,7 @@ export default async function start(ctx) {
     if (!word.includes(prompt)) return `Must contain ${prompt.toUpperCase()}`;
     if (!dict.has(word)) return 'Not a word';
     if (used.has(word)) return 'Already used';
+    if (isOffensive(word)) return 'Keep it clean';
     return null;
   }
 
@@ -492,7 +497,10 @@ export default async function start(ctx) {
       pillEl.classList.remove('bad');
       void pillEl.offsetWidth;
       pillEl.classList.add('bad');
-      setHint(`✖ ${escapeHtml(reason)}`, 'bad', 1400);
+      clearTimeout(onSubmit.badT);
+      onSubmit.badT = setTimeout(() => pillEl.classList.remove('bad'), 500);
+      setHint(escapeHtml(reason), 'bad', 1400);
+      if (reason !== 'Type a word!') ctx.vibrate(pid, 'error');
       flashSeat(r, 'shake', 450);
       return;
     }
@@ -509,7 +517,7 @@ export default async function start(ctx) {
       audio.bonus();
       renderSeat(r, bonus ? 'gain' : null);
       if (r.pos) {
-        callout(r.pos.x, r.pos.y - layout.A * 1.1, bonus ? '+1 ❤️ ALPHABET BONUS!' : 'ALPHABET COMPLETE!', Math.max(18, layout.A * 0.36), '#ffcf3d');
+        callout(r.pos.x, r.pos.y - layout.A * 1.1, bonus ? `+1 ${HEART_SVG} Alphabet bonus` : 'Alphabet complete', Math.max(18, layout.A * 0.36), '#ffc531');
         fx.burst(r.pos.x, r.pos.y, '255,207,61', 50, 1.2);
       }
     }
@@ -555,17 +563,19 @@ export default async function start(ctx) {
     if (eliminated) {
       r.alive = false;
       r.elimOrder = ++elimCounter;
+      r.outAt = performance.now();
       audio.eliminated();
     } else audio.heartLost();
     renderSeat(r, 'lose');
     flashSeat(r, 'hit', 750);
     if (r.pos) {
       later(() => fx.explode(r.pos.x, r.pos.y, 0.45), 120);
-      callout(r.pos.x, r.pos.y - layout.A * 1.05, eliminated ? '💀 OUT!' : '−1 ❤️', Math.max(20, layout.A * 0.45), eliminated ? '#ff7088' : '#fff');
+      callout(r.pos.x, r.pos.y - layout.A * 1.05, eliminated ? 'OUT' : `−1 ${HEART_SVG}`, Math.max(20, layout.A * 0.45), eliminated ? '#ff6b7d' : '#f4f1ea');
     }
     const ex = exampleWord(missed);
-    later(() => setHint(`💥 <b>${escapeHtml(r.player.name)}</b> got blown up!${ex ? `  Could've played <b>${ex.toUpperCase()}</b>` : ''}`, 'info'), 500);
+    later(() => setHint(`${eliminated ? `${escapeHtml(r.player.name)} is out.` : `Boom! ${escapeHtml(r.player.name)} loses a life.`}${ex ? `&ensp;Could've played <b>${ex.toUpperCase()}</b>` : ''}`, 'info'), 500);
     ctx.send(r.id, { type: 'boom', eliminated });
+    ctx.vibrate(r.id, eliminated ? 'lose' : 'explosion');
     renderHud();
     syncAll();
     later(afterBoom, 2800);
@@ -595,7 +605,7 @@ export default async function start(ctx) {
     pauseRemaining = Math.max(MIN_TURN_MS, fuseEnd - pauseSince);
     pauseElapsed = pauseSince - fuseStart;
     audio.stopHiss();
-    showWait('📵 Waiting for players to reconnect…');
+    showWait('Waiting for players to reconnect…<small>The game ends in 30 seconds if nobody comes back</small>');
   }
 
   function resumeIfPossible() {
@@ -617,6 +627,19 @@ export default async function start(ctx) {
       if (now - pauseSince > PAUSE_MS) { hideWait(); finish(); }
       return;
     }
+    const forfeitMs = FAST ? 5000 : FORFEIT_MS;
+    for (const r of roster.values()) {
+      if (r.alive && !r.connected && r.dcSince && now - r.dcSince > forfeitMs) {
+        r.alive = false;
+        r.forfeit = true;
+        r.elimOrder = ++elimCounter;
+        r.outAt = r.dcSince; // ranked by when they left, not when the timeout fired
+        renderSeat(r);
+        renderHud();
+        syncAll();
+      }
+    }
+    if (isOver()) { hideWait(); finish(); return; }
     const h = roster.get(holder);
     if (!h || !h.connected || !h.alive) {
       const next = nextAlive(holder);
@@ -624,13 +647,15 @@ export default async function start(ctx) {
       else if (!next) { enterPause(); return; }
     }
     if (!practice && connectedAlive().length === 1 && aliveList().length > 1) {
-      if (!loneSince) { loneSince = now; showWait('📵 Everyone else disconnected…<br><small>Ending the game soon unless they come back</small>'); }
+      if (!loneSince) { loneSince = now; showWait('Everyone else disconnected<small>Ending the game soon unless they come back</small>'); }
       else if (now - loneSince > LONELY_MS) { loneSince = 0; hideWait(); finish(); return; }
     } else if (loneSince) { loneSince = 0; hideWait(); }
+    if (testFreeze) fuseEnd = Math.max(fuseEnd, now + 1000);
     const elapsed = now - fuseStart;
     const heat = clamp(elapsed / fuseVisMax, 0, 1);
     fx.bomb.heat = heat;
     fx.bomb.fuse = 1 - heat * 0.92;
+    if (heat > 0.7) shake = Math.max(shake, (heat - 0.7) * 1.1); // the table starts to rattle
     if (now >= nextTickAt) {
       audio.tick(heat);
       if (Math.random() < 0.5) audio.crackle();
@@ -646,15 +671,16 @@ export default async function start(ctx) {
     phase = 'intro';
     syncAll();
     const ms = first ? 5200 : 3200;
+    const tiles = BONUS_LETTERS.slice(0, 8).toUpperCase().split('').map((c, i) => `<span class="${i < 5 ? 'on' : ''}">${c}</span>`).join('');
+    const heart = (cls = '') => HEART_SVG.replace('<svg', `<svg class="${cls}"`);
     const ov = el('div', 'wb-overlay', root, `
       <div class="wb-card">
-        <div class="title">💣 WORD BOMB</div>
-        <div class="sub">${practice ? 'Practice mode: how long can you survive?' : 'Pass the bomb before it blows up!'}</div>
+        <div class="head"><div class="title">Word Bomb</div><div class="sub">${practice ? 'Practice: how long can you last?' : 'Last one standing wins'}</div></div>
         <div class="wb-rules">
-          <div class="wb-rule"><div class="ico">⌨️</div><div><b>Type a word</b>containing the letters on the bomb<div class="wb-ex"><span class="p">ING</span><span class="arrow">→</span>S<span class="p">ING</span>ER</div></div></div>
-          <div class="wb-rule"><div class="ico">💣</div><div><b>Pass it on</b>A real, unused word sends the bomb to the next player</div></div>
-          <div class="wb-rule"><div class="ico">💥</div><div><b>Hidden fuse</b>If it explodes in your hands you lose a ❤️. Last one standing wins!</div></div>
-          <div class="wb-rule"><div class="ico">🔤</div><div><b>Alphabet bonus</b>Use every letter A–Z (except ${BONUS_EXCLUDE.toUpperCase().split('').join(' ')}) to earn +1 ❤️</div></div>
+          <div class="wb-rule"><div class="n">1</div><div><b>Type a word with the letters</b>The letters on the bomb can go anywhere in your word.<div class="wb-ex"><span class="chip">ING</span><span class="arrow">→</span><span>S<span class="hl">ING</span>ER</span></div></div></div>
+          <div class="wb-rule"><div class="n">2</div><div><b>Pass the bomb</b>A real word nobody has used yet sends it to the next player.</div></div>
+          <div class="wb-rule"><div class="n">3</div><div><b>Don't be holding it</b>The fuse is hidden. If it blows up on you, you lose a life.<div class="wb-ex">${heart()}${heart()}${heart('empty')}</div></div></div>
+          <div class="wb-rule"><div class="n">4</div><div><b>Alphabet bonus</b>Use every letter except ${BONUS_EXCLUDE.toUpperCase().split('').join(' ')} across your words for an extra life.<div class="wb-ex"><span class="tiles">${tiles}</span></div></div></div>
         </div>
         <div class="wb-bar"><i style="animation-duration:${ms}ms"></i></div>
       </div>`);
@@ -668,8 +694,9 @@ export default async function start(ctx) {
   }
 
   function ranking() {
-    const alive = aliveList().sort((a, b) => b.hearts - a.hearts || b.words.length - a.words.length);
-    const dead = order.map((id) => roster.get(id)).filter((r) => !r.alive).sort((a, b) => b.elimOrder - a.elimOrder);
+    // connected survivors first: someone who walked away doesn't win by not being blown up
+    const alive = aliveList().sort((a, b) => (b.connected - a.connected) || b.hearts - a.hearts || b.words.length - a.words.length);
+    const dead = order.map((id) => roster.get(id)).filter((r) => !r.alive).sort((a, b) => (b.outAt || 0) - (a.outAt || 0));
     return [...alive, ...dead];
   }
 
@@ -691,13 +718,16 @@ export default async function start(ctx) {
     if (w) {
       const longest = w.longest ? displayWord(w.longest).toUpperCase() : '';
       const ov = el('div', 'wb-overlay', root, `
-        <div class="wb-win" style="--c:${w.player.color}">
-          <div class="crown">${practice ? '🎯' : '👑'}</div>
-          <div class="big">${w.player.avatar}</div>
-          <div class="name">${practice ? `<span>${w.words.length}</span> word${w.words.length === 1 ? '' : 's'}!` : `<span>${escapeHtml(w.player.name)}</span> wins!`}</div>
+        <div class="wb-win" style="--c:${w.player.color};--on:${onColor(w.player.color)}">
+          <div class="big">${practice ? w.words.length : escapeHtml(initials(w.player.name))}</div>
+          <div class="name">${practice ? `${w.words.length} word${w.words.length === 1 ? '' : 's'}` : `${escapeHtml(w.player.name)} wins`}</div>
           <div class="stats">${practice ? 'Practice complete' : `${w.words.length} word${w.words.length === 1 ? '' : 's'} played`}${longest ? ` · longest <b>${escapeHtml(longest)}</b>` : ''}</div>
         </div>`);
-      ov.style.background = 'rgba(8,4,20,.45)';
+      if (!practice) {
+        ctx.vibrate(w.id, 'win');
+        for (const r of rank.slice(1)) if (r.connected) ctx.vibrate(r.id, 'lose');
+      }
+      ov.style.background = 'rgba(14,15,18,.55)';
       fx.confetti(practice ? 90 : 200);
       sfx.play('win');
       await wait(3600);
@@ -732,6 +762,7 @@ export default async function start(ctx) {
     const r = roster.get(p.id);
     if (r) {
       r.connected = true;
+      r.dcSince = 0;
       r.player = p;
       renderSeat(r);
       if (paused) resumeIfPossible();
@@ -755,6 +786,7 @@ export default async function start(ctx) {
     const r = roster.get(p.id);
     if (r) {
       r.connected = false;
+      r.dcSince = performance.now();
       renderSeat(r);
       if (phase === 'play' && holder === p.id && !paused) {
         const next = nextAlive(p.id);
@@ -801,6 +833,11 @@ export default async function start(ctx) {
       hearts: () => Object.fromEntries([...roster.values()].map((r) => [r.player.name, r.hearts])),
       words: () => Object.fromEntries([...roster.values()].map((r) => [r.player.name, r.words.length])),
       spectators: () => [...spectators.values()].map((p) => p.name),
+      roster: () => order.map((id) => { const r = roster.get(id); return { id, name: r.player.name, alive: r.alive, connected: r.connected, hearts: r.hearts, words: r.words.length, forfeit: r.forfeit }; }),
+      get level() { return level(); },
+      forcePrompt(p) { if (phase !== 'play') return false; prompt = p; setPrompt(p); typing = ''; renderTyping(); syncAll(); return true; },
+      fuseNow() { if (phase === 'play' && !paused) { testFreeze = false; fuseEnd = performance.now(); } },
+      freeze(v) { testFreeze = !!v; },
     };
   }
   resetGame();
@@ -812,6 +849,7 @@ export default async function start(ctx) {
       gen++;
       for (const id of timers) clearTimeout(id);
       clearTimeout(setHint.t);
+      clearTimeout(onSubmit.badT);
       cancelAnimationFrame(raf);
       clearInterval(guard);
       ro.disconnect();
@@ -821,6 +859,8 @@ export default async function start(ctx) {
     },
   };
 }
+
+const onColor = (css) => onColorRgb(hexRgb(css));
 
 const rgbCache = new Map();
 function hexRgb(css) {

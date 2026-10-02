@@ -208,6 +208,8 @@ function crumble(R, lib, sim) {
   const decor = new THREE.Group();
   const tiles = sim.arena.tiles;
   const stoneTex = canvasTex(256, (g, s) => speckle(g, s, '#b5a48f', ['#8a7a66', '#d6c6ae', '#6e604f'], 900, 4));
+  stoneTex.wrapS = stoneTex.wrapT = THREE.RepeatWrapping; // tile UVs are in world units
+  stoneTex.repeat.set(0.5, 0.5);
   const mats = [std(0xffffff, { map: stoneTex, flatShading: true }), std(0xd8ccbb, { map: stoneTex, flatShading: true }), std(0xc4b19a, { map: stoneTex, flatShading: true })];
   const chunkMat = std(0x5a4a3e, { flatShading: true, roughness: 1 });
   const views = new Map();
@@ -221,7 +223,9 @@ function crumble(R, lib, sim) {
       const ri = ring.inner + gap;
       const ro = ring.outer - gap;
       const steps = 6;
-      for (let k = 0; k <= steps; k++) { const a = a0 + ((a1 - a0) * k) / steps; shape.lineTo(Math.cos(a) * ro, -Math.sin(a) * ro); }
+      // moveTo first: a bare lineTo would start the outline at the origin and fan a sliver back to the centre
+      shape.moveTo(Math.cos(a0) * ro, -Math.sin(a0) * ro);
+      for (let k = 1; k <= steps; k++) { const a = a0 + ((a1 - a0) * k) / steps; shape.lineTo(Math.cos(a) * ro, -Math.sin(a) * ro); }
       for (let k = steps; k >= 0; k--) { const a = a0 + ((a1 - a0) * k) / steps; shape.lineTo(Math.cos(a) * ri, -Math.sin(a) * ri); }
       const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 1 });
       geo.rotateX(-Math.PI / 2);
@@ -300,7 +304,7 @@ function crumble(R, lib, sim) {
         } else if (tile.state === 'shaking') {
           const k = tile.t / 1.3;
           v.g.position.set(v.cx + (Math.random() - 0.5) * 0.12 * k, (Math.random() - 0.5) * 0.06 * k - k * 0.05, v.cz + (Math.random() - 0.5) * 0.12 * k);
-          if (Math.random() < dt * 8) fx.dust(v.cx, -0.2, v.cz, 1, 0xa89880, 0.6);
+          if (Math.random() < dt * 8) fx.puff(v.cx, -0.1, v.cz, (Math.random() - 0.5), 0.6, (Math.random() - 0.5), 0.6, 0.5, 1.2, 0.7, 0xa89880, 0);
         } else if (tile.state === 'falling') {
           const tt = tile.t;
           v.g.position.set(v.cx * (1 + tt * 0.05), -0.5 * 20 * tt * tt, v.cz * (1 + tt * 0.05));
@@ -313,8 +317,9 @@ function crumble(R, lib, sim) {
       if (fx) {
         for (const f of fires) {
           if (Math.random() < dt * 14) {
-            const p = f.isl.localToWorld(new THREE.Vector3(f.x, f.y, f.z));
-            fx.spawn({ x: p.x + (Math.random() - 0.5) * 0.3, y: p.y, z: p.z + (Math.random() - 0.5) * 0.3, vy: 1.5 + Math.random(), life: 0.6, size: 0.7, size1: 0.1, color: Math.random() < 0.5 ? 0xffa030 : 0xff5a10, shape: 0 });
+            if (!f.world) { f.isl.updateWorldMatrix(true, false); f.world = f.isl.localToWorld(new THREE.Vector3(f.x, f.y, f.z)); }
+            const p = f.world;
+            fx.puff(p.x + (Math.random() - 0.5) * 0.3, p.y, p.z + (Math.random() - 0.5) * 0.3, 0, 1.5 + Math.random(), 0, 0.6, 0.7, 0.1, 1, Math.random() < 0.5 ? 0xffa030 : 0xff5a10, 0);
           }
         }
       }
@@ -422,10 +427,10 @@ function spinner(R, lib, sim) {
 function mushroom(R, lib) {
   const platform = new THREE.Group();
   const decor = new THREE.Group();
-  const pts = [];
+  // profile runs bottom -> rim -> over the dome to the centre so the lathe faces point outward (visible from above)
+  const pts = [new THREE.Vector2(R * 0.85, -0.75), new THREE.Vector2(R + 0.3, -0.7), new THREE.Vector2(R + 0.45, -0.4), new THREE.Vector2(R + 0.35, -0.12)];
   const N = 24;
-  for (let i = 0; i <= N; i++) { const r = (i / N) * R; pts.push(new THREE.Vector2(r, 0.9 * (1 - (r / R) ** 2))); }
-  pts.push(new THREE.Vector2(R + 0.35, -0.12), new THREE.Vector2(R + 0.45, -0.4), new THREE.Vector2(R + 0.3, -0.7), new THREE.Vector2(R * 0.85, -0.75));
+  for (let i = N; i >= 0; i--) { const r = (i / N) * R; pts.push(new THREE.Vector2(Math.max(r, 0.0001), 0.9 * (1 - (r / R) ** 2))); }
   const cap = new THREE.Mesh(new THREE.LatheGeometry(pts, 72), std(0xe8413a, { roughness: 0.45 }));
   cap.position.y = -0.02;
   platform.add(cap);
@@ -490,7 +495,6 @@ function mushroom(R, lib) {
       squashV += (-squash * 90 - squashV * 7) * dt;
       squash += squashV * dt;
       cap.scale.y = 1 + squash * 0.35;
-      spots.forEach((s) => { s.position.y += 0; });
     },
   };
 }

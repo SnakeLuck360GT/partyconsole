@@ -13,6 +13,9 @@ export default defineConfig(async () => ({
   plugins: https ? [(await import('@vitejs/plugin-basic-ssl')).default()] : [],
   build: {
     target: 'es2022',
+    // Hashed JS/CSS go to /bundle/ (cached forever, see netlify.toml), apart from public/assets/, whose
+    // un-hashed covers, models and word lists must revalidate so updates reach browsers.
+    assetsDir: 'bundle',
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       input: {

@@ -68,32 +68,60 @@ function damageColor(d) {
 }
 export { damageColor };
 
+function crownPath(g, x, y, w, h) {
+  g.beginPath();
+  g.moveTo(x, y + h);
+  g.lineTo(x, y + h * 0.25);
+  g.lineTo(x + w * 0.25, y + h * 0.6);
+  g.lineTo(x + w * 0.5, y);
+  g.lineTo(x + w * 0.75, y + h * 0.6);
+  g.lineTo(x + w, y + h * 0.25);
+  g.lineTo(x + w, y + h);
+  g.closePath();
+}
+
 function drawBadge(c, name, color, dmg, { crown = false, dim = false } = {}) {
   const g = c.getContext('2d');
   g.clearRect(0, 0, c.width, c.height);
-  // name pill
-  g.font = '800 34px system-ui, sans-serif';
-  const label = (crown ? '👑 ' : '') + name;
-  const w = Math.min(248, g.measureText(label).width + 30);
-  g.fillStyle = color;
-  g.globalAlpha = dim ? 0.5 : 0.95;
+  // name pill in the player's colour (with a gold crown for the match leader)
+  g.font = '600 34px Fredoka, system-ui, sans-serif';
+  const cw = crown ? 34 : 0;
+  const tw = Math.min(236 - cw, g.measureText(name).width);
+  const w = tw + cw + 30;
+  const x0 = (c.width - w) / 2;
+  g.fillStyle = 'rgba(0,0,0,0.35)';
   g.beginPath();
-  g.roundRect((c.width - w) / 2, 4, w, 46, 23);
+  g.roundRect(x0, 8, w, 46, 14);
+  g.fill();
+  g.fillStyle = color;
+  g.globalAlpha = dim ? 0.5 : 1;
+  g.beginPath();
+  g.roundRect(x0, 4, w, 46, 14);
   g.fill();
   g.globalAlpha = 1;
+  if (crown) {
+    crownPath(g, x0 + 12, 14, 28, 24);
+    g.fillStyle = '#ffd23a';
+    g.fill();
+    g.lineWidth = 3;
+    g.strokeStyle = 'rgba(40,20,0,0.6)';
+    g.stroke();
+  }
   g.fillStyle = '#fff';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.lineWidth = 5;
-  g.strokeStyle = 'rgba(0,0,0,0.35)';
-  g.strokeText(label, c.width / 2, 28, 236);
-  g.fillText(label, c.width / 2, 28, 236);
+  g.lineWidth = 6;
+  g.lineJoin = 'round';
+  g.strokeStyle = 'rgba(0,0,0,0.4)';
+  const tx = x0 + 15 + cw + tw / 2;
+  g.strokeText(name, tx, 28, 236 - cw);
+  g.fillText(name, tx, 28, 236 - cw);
   // damage %
   if (dmg !== null) {
-    g.font = 'italic 900 70px system-ui, sans-serif';
+    g.font = '700 68px Fredoka, system-ui, sans-serif';
     const txt = `${Math.round(dmg)}%`;
-    g.lineWidth = 10;
-    g.strokeStyle = 'rgba(20,10,30,0.9)';
+    g.lineWidth = 12;
+    g.strokeStyle = 'rgba(20,10,30,0.92)';
     g.strokeText(txt, c.width / 2, 102);
     g.fillStyle = damageColor(dmg);
     g.fillText(txt, c.width / 2, 102);
@@ -229,11 +257,12 @@ export function createFighterView(scene, player, speciesIdx) {
     flash() { flashT = 0.14; },
     squash(v) { squashV += v; },
     update(f, dt, t, { crown = false, showDamage = true } = {}) {
-      const visible = f.state === 'alive' || f.state === 'falling' || (f.state === 'idle' && pose);
+      // three.js only hides on visible === false, so keep these strictly boolean
+      const visible = f.state === 'alive' || f.state === 'falling' || (f.state === 'idle' && !!pose);
       root.visible = visible && !(f.invuln > 0 && f.state === 'alive' && Math.floor(t * 12) % 2 === 0 && f.invuln < 1.8);
       ring.visible = f.state === 'alive' && f.y < 2.5;
       chargeRing.visible = f.charging;
-      badge.visible = (f.state === 'alive' || (f.state === 'idle' && pose)) && f.y > -2;
+      badge.visible = (f.state === 'alive' || (f.state === 'idle' && !!pose)) && f.y > -2;
       if (!visible) { badge.visible = false; ring.visible = false; return; }
 
       root.position.set(f.x, f.y, f.z);

@@ -2,6 +2,7 @@
 // Fastest wins the round. Pressing early (or on a fake-out) is a FAULT. Best of 3.
 import { createSession, THREE, sfx, rand } from './_shared-core.js';
 import { spawnCharacters } from './_shared-chars.js';
+import { escapeHtml } from '../../../sdk/screen-kit.js';
 import { propFactory, scatter, groundTexture } from './_shared-env.js';
 
 const ROUNDS = 3;
@@ -11,7 +12,7 @@ export default {
   name: 'Quick Draw',
   instructions: 'Wait for the big <b>!</b>, then press <b>A</b> as fast as you can. Press too early, or on a fake-out, and you FAULT. Best of 3!',
   mode: 'ffa',
-  minPlayers: 2,
+  minPlayers: 1,
   controls: { stick: 'none', buttons: [{ id: 'a', label: 'FIRE!' }], hint: 'Wait for <b>!</b> then press <b>A</b>' },
   duration: 45,
 
@@ -69,7 +70,7 @@ export default {
 
       // big signal overlay
       const sig = document.createElement('div');
-      sig.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:22;font-family:var(--font)';
+      sig.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:22;font-family:Figtree,system-ui,sans-serif';
       s.root.appendChild(sig);
       function signal(html, color = '#fff') {
         sig.innerHTML = html ? `<span style="font-size:30vmin;font-weight:700;color:${color};-webkit-text-stroke:1vmin #0007;text-shadow:0 2vmin 0 #0005;animation:pbm-slam .35s cubic-bezier(.2,1.7,.4,1)">${html}</span>` : '';
@@ -112,7 +113,7 @@ export default {
         await s.wait(1300);
         if (s.aborted) break;
         signal('Ready…', '#ffe7b0');
-        list.forEach((c) => { s.status(c.id, '🤠 Steady… wait for <b>!</b>'); c.play('idle'); });
+        list.forEach((c) => { s.status(c.id, 'Steady… wait for <b>!</b>'); c.play('idle'); });
         // drain stale presses
         list.forEach((c) => s.input(c.id).pressed('a'));
         const wait = rand(1.8, 4.2);
@@ -127,7 +128,7 @@ export default {
             el += dt;
             if (!fired) {
               if (fakeAt > 0 && !fakeShown && el >= fakeAt) { fakeShown = true; signal(Math.random() < 0.5 ? '?' : '¡', '#9ad0ff'); sfx.play('blip'); s.after(450, () => { if (!fired) signal('Ready…', '#ffe7b0'); }); }
-              if (el >= wait) { fired = true; sigT = performance.now(); signal('!', '#ff3b3b'); sfx.play('go'); s.shake(0.2); list.forEach((c) => s.status(c.id, '🔥 FIRE! Press <b>A</b>!')); }
+              if (el >= wait) { fired = true; sigT = performance.now(); signal('!', '#ff3b3b'); sfx.play('go'); s.shake(0.2); list.forEach((c) => s.status(c.id, '<b>FIRE!</b> Press <b>A</b>!')); }
             }
             for (const c of list) {
               const r = rig.get(c.id);
@@ -141,7 +142,7 @@ export default {
                   s.vibrate(c.id, 300);
                   s.pop(c.pos.clone().setY(c.height + 0.6), 'FAULT!', '#ff6a6a', { size: 1.2 });
                   s.hud.setScore(c.id, c.wins, { extra: 'fault', bump: false });
-                  s.status(c.id, '❌ Fault! Too early.');
+                  s.status(c.id, 'Fault! Too early.');
                 } else {
                   r.time = (performance.now() - sigT) / 1000;
                   const first = !winnerOfRound;
@@ -161,9 +162,9 @@ export default {
         if (s.aborted) break;
         if (winnerOfRound) {
           winnerOfRound.wins += 1;
-          s.hud.setScore(winnerOfRound.id, winnerOfRound.wins, { extra: '⚡' });
-          s.hud.note(`<span style="color:${winnerOfRound.player.color}">${winnerOfRound.player.name}</span> was fastest! (${rig.get(winnerOfRound.id).time.toFixed(3)}s)`, 1800);
-          s.status(winnerOfRound.id, '⚡ Fastest! +1 win');
+          s.hud.setScore(winnerOfRound.id, winnerOfRound.wins, { extra: 'fastest' });
+          s.hud.note(`<span style="color:${winnerOfRound.player.color}">${escapeHtml(winnerOfRound.player.name)}</span> was fastest! (${rig.get(winnerOfRound.id).time.toFixed(3)}s)`, 1800);
+          s.status(winnerOfRound.id, 'Fastest! +1 win');
           sfx.play('correct');
           s.after(400, () => winnerOfRound.action('yes', 1.2));
         } else {

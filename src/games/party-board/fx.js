@@ -384,6 +384,18 @@ export function createCameraRig(camera) {
     },
     /** Hand the camera to a custom animation for a while. */
     manual(on = true) { manual = on; },
+    /** Adopt the camera's current pose (after a manual animation) so the next move starts smoothly. */
+    syncFrom(lookAt) {
+      look.copy(lookAt);
+      goalLook.copy(lookAt);
+      follow = null;
+      const d = tmpV.copy(camera.position).sub(lookAt);
+      cur.dist = d.length();
+      cur.pitch = Math.asin(THREE.MathUtils.clamp(d.y / cur.dist, -1, 1));
+      cur.yaw = Math.atan2(d.x, d.z);
+      Object.assign(goal, cur);
+      manual = false;
+    },
     shake(a = 0.6) { shake = Math.max(shake, a); },
     get goal() { return goal; },
     update(dt) {

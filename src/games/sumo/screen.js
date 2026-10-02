@@ -23,6 +23,7 @@ const POWER_INFO = {
 const BOT_NAMES = ['Bonk', 'Wobbles', 'Chonk', 'Sir Shove', 'Thud', 'Mochi'];
 const SURFACE_KIND = { dohyo: 0, ice: 0, crumble: 1, spinner: 0, mushroom: 2 };
 const STEP = 1 / 60;
+const SLOW_LEN = 1.4;
 
 export default async function start(ctx) {
   const stage = createStage(ctx.container, { background: 0x87b5ff, shadows: true, shadowArea: 16, fov: 42, envIntensity: 0.55 });
@@ -99,6 +100,10 @@ export default async function start(ctx) {
   const bombViews = new Map();
   const stateSendT = new Map();
   let botCount = 0;
+  let maxRounds = 99;
+  let roundSize = 0; // fighters who started this round
+  let slowT = 99; // seconds since the final ring-out started (slow motion while < SLOW_LEN)
+  let slowFocus = null;
 
   const sim = createSim({ emit: onEvent });
 
@@ -144,28 +149,39 @@ export default async function start(ctx) {
     let st = 'wait';
     if (phase === 'intro') st = 'intro';
     else if (phase === 'results') st = 'results';
+    else if (phase === 'roundEnd') st = 'roundEnd';
+    else if (!e.inMatch || f.state === 'idle' || (e.left && f.state === 'out')) st = 'wait';
     else if (f.state === 'alive') st = 'alive';
     else if (f.state === 'falling') st = 'falling';
     else if (f.state === 'respawning') st = 'respawn';
     else if (f.state === 'out') st = 'out';
-    else if (!e.inMatch || f.state === 'idle') st = phase === 'roundEnd' ? 'roundEnd' : 'wait';
+    let rank = 0;
+    if (phase === 'results' || phase === 'roundEnd') rank = rankedEntries().indexOf(e) + 1;
     return {
       type: 'st', phase, st, mode, target, round: roundNo, arena: ARENA_RULES[arenaType]?.name,
       dmg: Math.round(f.damage), wins: e.wins, pts: e.pts, power: f.power, powerT: f.powerT,
       respawnIn: f.state === 'respawning' ? f.respawnT : 0,
-      color: e.player.color,
+      won: phase === 'roundEnd' && focusId === e.id && mode === 'rounds',
+      champ: phase === 'results' && rank === 1,
+      rank, alive: sim.aliveCount(),
     };
   }
+  const statePending = new Set();
   function sendState(id, force = true) {
     const e = entries.get(id);
     if (!e || e.isBot) return;
     const now = performance.now();
-    if (!force && now - (stateSendT.get(id) || 0) < 150) { later(() => sendState(id, true), 160); return; }
+    if (!force && now - (stateSendT.get(id) || 0) < 150) {
+      if (!statePending.has(id)) { statePending.add(id); later(() => { statePending.delete(id); sendState(id, true); }, 160); }
+      return;
+    }
     stateSendT.set(id, now);
     ctx.send(id, stateFor(e));
   }
   function sendAll() { for (const e of entries.values()) if (!e.isBot) sendState(e.id); }
-  function buzz(id, p) { const e = entries.get(id); if (e && !e.isBot) ctx.send(id, { type: 'buzz', p }); }
+  // Haptics go through the platform (phones honour the player's toggle; iPhones get a screen-edge flash).
+  function buzz(id, p) { const e = entries.get(id); if (e && !e.isBot && ctx.player(id)?.connected) ctx.vibrate(id, p); }
+  const who = (e) => `<span class="who" style="--c:${e.player.color}">${escapeHtml(e.player.name)}</span>`;
 
   // ------------------------------------------------------------ events from the sim
   function onEvent(type, d) {
@@ -185,14 +201,16 @@ export default async function start(ctx) {
         sounds.smack();
         if (big) { sfx.play('hit'); hitStop = d.kb > 17 ? 0.09 : 0.06; }
         shake = Math.max(shake, Math.min(0.6, 0.12 + d.kb * 0.02));
-        buzz(d.tgt.id, big ? [60, 30, 60] : 45);
-        buzz(d.att.id, 15);
+        buzz(d.tgt.id, big ? 'heavy' : 'hit');
+        buzz(d.att.id, 'bump');
+        entries.get(d.att.id)?.view.squash(2.5);
         break;
       }
       case 'hurt': {
         fe?.view.flash();
+        fe?.view.squash(-Math.min(7, 2 + d.kb * 0.3));
         if (fe) { fe.hitCard = performance.now(); cardsDirty = true; }
-        if (d.f && !d.f.isBot) { sendState(d.f.id, false); if (!d.dash) buzz(d.f.id, 40); }
+        if (d.f && !d.f.isBot) { sendState(d.f.id, false); if (!d.dash) buzz(d.f.id, d.kb > 12 ? 'heavy' : 'hit'); }
         break;
       }
       case 'bump': {
@@ -223,8 +241,14 @@ export default async function start(ctx) {
         sounds.scream();
         tilt = 1;
         tiltDir = Math.sign(d.f.x) || 1;
-        if (d.f && !d.f.isBot) buzz(d.f.id, [100, 50, 100, 50, 300]);
+        buzz(d.f.id, 'lose');
         sendState(d.f.id);
+        // last ring-out of the round: slow motion + camera follows the faller
+        if (phase === 'play' && mode === 'rounds' && roundSize >= 2 && sim.aliveCount() <= 1) {
+          slowT = 0;
+          slowFocus = d.f;
+          hitStop = Math.max(hitStop, 0.08);
+        }
         break;
       }
       case 'splash': {
@@ -239,8 +263,8 @@ export default async function start(ctx) {
         sfx.play('powerup');
         fx.ring(d.f.x, d.f.y, d.f.z, 2.5, { color: info.hex, dur: 0.5 });
         fx.sparks(d.f.x, d.f.y + 1, d.f.z, 16, info.hex, 6);
-        hud.feed(`<span class="who" style="--c:${fe.player.color}">${escapeHtml(fe.player.name)}</span> got <b style="color:${info.color}">${info.label}</b> · ${info.desc}`, info.color);
-        buzz(d.f.id, [30, 40, 30]);
+        hud.feed(`${who(fe)} got <b style="color:${info.color}">${info.label}</b> · ${info.desc}`);
+        buzz(d.f.id, 'boost');
         sendState(d.f.id);
         if (d.kind === 'mega') sounds.boing();
         break;
@@ -327,25 +351,25 @@ export default async function start(ctx) {
     const ve = entries.get(victim.id);
     if (!ve) return;
     const ke = killerId && killerId !== 'arena' && killerId !== victim.id ? entries.get(killerId) : null;
-    const vName = `<span class="who" style="--c:${ve.player.color}">${escapeHtml(ve.player.name)}</span>`;
+    const vName = who(ve);
     if (ke) {
       ke.kos++;
       if (mode === 'points') ke.pts++;
-      hud.feed(`<span class="who" style="--c:${ke.player.color}">${escapeHtml(ke.player.name)}</span> 💥 ${vName}`, ke.player.color);
-      buzz(ke.id, [30, 30, 30]);
+      hud.feed(`${who(ke)} knocked out ${vName}`);
+      buzz(ke.id, 'success');
       sendState(ke.id);
     } else if (killerId === 'arena') {
-      hud.feed(`${vName} got wrecked by the arena 🌀`, ve.player.color);
+      hud.feed(`${vName} got wrecked by the arena`);
     } else {
       if (mode === 'points') ve.pts--;
-      hud.feed(`${vName} fell off all alone 🙈${mode === 'points' ? ' <b style="color:#ff6a5a">−1</b>' : ''}`, ve.player.color);
+      hud.feed(`${vName} fell off alone${mode === 'points' ? ' <span class="bad">−1</span>' : ''}`);
     }
     if (mode === 'points' && phase === 'play') {
       victim.state = 'respawning';
       victim.respawnT = 3;
     }
     cardsDirty = true;
-    sendState(victim.id);
+    sendAll(); // everyone's "N still standing" changes
   }
 
   // ------------------------------------------------------------ platform events
@@ -354,11 +378,12 @@ export default async function start(ctx) {
     if (e) {
       e.f.active = true;
       e.player = { ...e.player, ...p };
-      if (mode === 'points' && phase === 'play' && e.f.state === 'idle') { e.inMatch = true; sim.spawnFromSky(e.f); }
+      if (mode === 'points' && phase === 'play' && (e.f.state === 'idle' || e.f.state === 'out')) { e.inMatch = true; e.left = false; sim.spawnFromSky(e.f); }
+      if (rejoin) hud.feed(`${who(e)} is back${mode === 'points' ? '' : ' · fights next round'}`);
     } else {
       e = addEntry(p);
       sfx.play('join');
-      hud.feed(`<span class="who" style="--c:${p.color}">${escapeHtml(p.name)}</span> joined${mode === 'points' ? '!' : ' · fights next round'}`, p.color);
+      hud.feed(`${who(e)} joined${mode === 'points' || phase === 'intro' ? '' : ' · fights next round'}`);
       if (mode === 'points' && phase === 'play') { e.inMatch = true; sim.spawnFromSky(e.f); }
     }
     if (!rejoin && phase !== 'results') syncBotsLater();
@@ -368,7 +393,16 @@ export default async function start(ctx) {
   ctx.onLeave((p) => {
     const e = entries.get(p.id);
     if (!e) return;
-    e.f.active = false; // character idles where it stands (and can still be shoved off!) — dropped next round
+    e.f.active = false;
+    // Pull the fighter out of the round cleanly (a puff of smoke, no KO credit). Their wins are kept for the results.
+    if (e.f.state === 'alive' || e.f.state === 'respawning') {
+      if (e.f.state === 'alive') { fx.dust(e.f.x, e.f.y, e.f.z, 10, 0xffffff, 1.4); fx.ring(e.f.x, e.f.y, e.f.z, 1.6, { color: 0xffffff, dur: 0.4 }); }
+      sim.withdraw(e.f);
+      e.left = true;
+      hud.feed(`${who(e)} left the arena`);
+      sfx.play('whoosh');
+    }
+    if (phase !== 'results') syncBotsLater();
     cardsDirty = true;
   });
   let botSyncPending = false;
@@ -402,50 +436,75 @@ export default async function start(ctx) {
     stage.sun.target.position.set(0, 0, 0);
   }
 
+  /** First-to-N scales with the crowd: bigger groups need fewer wins (and get a round cap) so matches stay ~6–8 min. */
+  function matchRules(humans) {
+    if (humans > 12) return { mode: 'points', target: 0, maxRounds: 3 };
+    if (humans <= 4) return { mode: 'rounds', target: 3, maxRounds: 99 };
+    return { mode: 'rounds', target: 2, maxRounds: humans <= 8 ? 7 : 8 };
+  }
+  function roundSubtitle() {
+    if (mode === 'points') return `Round ${roundNo} of ${maxRounds} · +1 per knockout`;
+    return maxRounds < 99 ? `First to ${target} wins · round ${roundNo} of ${maxRounds}` : `First to ${target} wins`;
+  }
+
   async function runMatch() {
     // reset
-    for (const e of [...entries.values()]) { e.wins = 0; e.pts = 0; e.kos = 0; if (!ctx.player(e.id)?.connected && !e.isBot) removeEntry(e.id); }
+    hud.clearOverlays();
+    for (const e of [...entries.values()]) { e.wins = 0; e.pts = 0; e.kos = 0; e.left = false; if (!ctx.player(e.id)?.connected && !e.isBot) removeEntry(e.id); }
     for (const p of ctx.players()) addEntry(p);
     syncBots();
     const humans = connectedHumans().length;
-    mode = humans > 8 ? 'points' : 'rounds';
-    target = humans <= 6 ? 3 : 5;
+    ({ mode, target, maxRounds } = matchRules(humans));
     roundNo = 0;
     phase = 'intro';
-    for (const e of entries.values()) { e.inMatch = true; e.f.state = 'idle'; }
+    focusId = null;
+    slowT = 99;
+    for (const e of entries.values()) { e.inMatch = true; e.f.state = 'idle'; e.view.setPose(null); }
     arenaType = 'dohyo';
     setupArena(arenaType);
     sim.placeForRound([...entries.values()].map((e) => e.f));
     for (const e of entries.values()) e.f.state = 'alive';
     sim.running = false;
     hud.setHeader('Sumo <b>Smash</b>', '');
+    hud.setTimer(null);
     sendAll();
-    const introMs = 5200;
-    hud.intro({ ms: introMs, modeText: mode === 'rounds' ? `Last one standing wins the round · First to ${target} wins` : `${humans} players! Knockout frenzy: 3 timed rounds, +1 per knockout, −1 for falling off alone, respawns on` });
-    await wait(introMs + 600);
+    // let the first frames (shader compiles) land before the timed how-to-play card starts
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    if (destroyed) return;
+    const introMs = 5500;
+    hud.intro({
+      ms: introMs,
+      modeText: mode === 'rounds'
+        ? `Last one standing wins the round · first to ${target} wins the match`
+        : `${humans} players: 3 timed rounds · +1 per knockout · −1 for falling off alone · you respawn`,
+    });
+    await wait(introMs + 400);
 
     while (!destroyed) {
       roundNo++;
       arenaType = ARENA_ORDER[(roundNo - 1) % ARENA_ORDER.length];
       if (botSyncPending) { botSyncPending = false; syncBots(); }
       // disconnected players sit out (their score is kept for the results)
-      for (const e of entries.values()) { e.inMatch = e.isBot || !!ctx.player(e.id)?.connected; e.view.setPose(null); }
+      for (const e of entries.values()) { e.inMatch = e.isBot || !!ctx.player(e.id)?.connected; e.left = false; e.view.setPose(null); }
       setupArena(arenaType);
       const list = [...entries.values()].filter((e) => e.inMatch).map((e) => e.f);
       sim.placeForRound(list);
       for (const e of entries.values()) e.f.state = e.inMatch ? 'alive' : 'idle';
+      roundSize = list.length;
       sim.running = false;
       phase = 'countdown';
       roundT = 0;
       roundLen = mode === 'points' ? 60 : 85;
       finalDuelAnnounced = list.length <= 2;
       focusId = null;
+      slowT = 99;
+      slowFocus = null;
       cardsDirty = true;
       hud.setTimer(mode === 'points' ? roundLen : null);
-      hud.setHeader(`Round ${roundNo} · <b>${ARENA_RULES[arenaType].name}</b>`, mode === 'rounds' ? `First to ${target} wins` : `Round ${roundNo} of 3 · knock 'em out!`);
+      hud.setHeader(`Round ${roundNo} · <b>${ARENA_RULES[arenaType].name}</b>`, roundSubtitle());
       sendAll();
-      hud.callout(`ROUND ${roundNo}<small>${ARENA_RULES[arenaType].name}${arenaHint(arenaType)}</small>`, 1600);
-      await wait(1800);
+      hud.callout(`${ARENA_RULES[arenaType].name}<small>${arenaHint(arenaType)}</small>`, 1900);
+      await wait(2100);
       if (destroyed) return;
       await countdown(ctx.container);
       if (destroyed) return;
@@ -455,16 +514,33 @@ export default async function start(ctx) {
       sendAll();
       await new Promise((r) => { onRoundOver = r; });
       if (destroyed) return;
-      if (mode === 'rounds' && [...entries.values()].some((e) => e.wins >= target)) break;
-      if (mode === 'points' && roundNo >= 3) break;
-      await wait(400);
+      if (matchOver()) break;
+      await wait(200);
     }
     if (destroyed) return;
     await showFinal();
   }
 
+  function matchOver() {
+    if (mode === 'points') return roundNo >= maxRounds;
+    return [...entries.values()].some((e) => e.wins >= target) || roundNo >= maxRounds;
+  }
+
   function arenaHint(t) {
-    return { dohyo: '', ice: ' · it\'s slippery!', crumble: ' · the floor is falling!', spinner: ' · tap SLAM to hop the sweeper!', mushroom: ' · extra bouncy!' }[t];
+    return {
+      dohyo: 'Classic ring · watch out for bombs',
+      ice: 'Slippery! Momentum carries you',
+      crumble: 'The floor falls away tile by tile',
+      spinner: 'Tap SLAM to hop over the sweeper',
+      mushroom: 'Extra bouncy · everything flies farther',
+    }[t];
+  }
+
+  function rankedEntries() {
+    const all = [...entries.values()].filter((e) => e.isBot || e.wins || e.pts || e.kos || ctx.player(e.id)?.connected);
+    return mode === 'rounds'
+      ? all.sort((a, b) => b.wins - a.wins || b.kos - a.kos || a.player.index - b.player.index)
+      : all.sort((a, b) => b.pts - a.pts || b.kos - a.kos || a.player.index - b.player.index);
   }
 
   async function endRound(winner, reason) {
@@ -472,28 +548,42 @@ export default async function start(ctx) {
     phase = 'roundEnd';
     sim.running = false;
     hud.setTimer(null);
+    let freshId = null;
     if (mode === 'rounds') {
       if (winner) {
         winner.wins++;
+        freshId = winner.id;
         focusId = winner.id;
         winner.view.setPose('win');
+        winner.f.face = 0; // turn to the camera
         fx.confetti(winner.f.x, winner.f.y + 2, winner.f.z, 90, 3);
         sfx.play('win');
-        hud.callout(`${escapeHtml(winner.player.name)} WINS!<small>${reason || `Round ${roundNo}`} · ${winner.wins}/${target}</small>`, 2600);
-        buzz(winner.id, [80, 60, 80, 60, 200]);
+        hud.callout(`<span class="c" style="--c:${winner.player.color}">${escapeHtml(winner.player.name)}</span> wins<small>${reason || `Round ${roundNo}`} · ${winner.wins} of ${target}</small>`, 2300, 'low');
+        buzz(winner.id, 'win');
       } else {
-        hud.callout(`NOBODY SURVIVED!<small>No point this round</small>`, 2200);
+        hud.callout('Nobody survived<small>No point this round</small>', 2200);
         sfx.play('lose');
       }
     } else {
-      const top = [...entries.values()].sort((a, b) => b.pts - a.pts)[0];
-      hud.callout(`TIME!<small>${top ? `${escapeHtml(top.player.name)} leads with ${top.pts}` : ''}</small>`, 2400);
+      const top = rankedEntries()[0];
+      hud.callout(`Time<small>${top ? `${escapeHtml(top.player.name)} leads with ${top.pts}` : ''}</small>`, 2300);
       sfx.play('go');
       if (top) { focusId = top.id; if (top.f.state === 'alive') top.view.setPose('win'); }
     }
     cardsDirty = true;
     sendAll();
-    await wait(3400);
+    await wait(2500);
+    if (destroyed) return;
+    if (!matchOver()) {
+      const rows = rankedEntries().map((e) => ({ name: e.player.name, color: e.player.color, wins: e.wins, pts: e.pts, fresh: e.id === freshId }));
+      const left = maxRounds - roundNo;
+      const sub = mode === 'rounds'
+        ? `First to ${target} wins${maxRounds < 99 ? ` · ${left} round${left === 1 ? '' : 's'} left` : ''}`
+        : `${left} round${left === 1 ? '' : 's'} left`;
+      hud.standings({ title: 'Standings', subtitle: sub, rows, mode, target, ms: 3300 });
+      sfx.play('blip');
+      await wait(3500);
+    }
     for (const e of entries.values()) e.view.setPose(null);
     onRoundOver?.();
   }
@@ -501,27 +591,31 @@ export default async function start(ctx) {
   async function showFinal() {
     phase = 'results';
     sim.running = false;
-    const all = [...entries.values()];
-    const rows = (mode === 'rounds'
-      ? all.sort((a, b) => b.wins - a.wins || b.kos - a.kos)
-      : all.sort((a, b) => b.pts - a.pts || b.kos - a.kos))
-      .map((e) => ({ player: e.player, score: mode === 'rounds' ? e.wins : e.pts, label: mode === 'rounds' ? (e.wins === 1 ? 'win' : 'wins') : 'pts' }));
-    const champ = rows[0]?.player;
-    // champion moment
-    const ce = champ && entries.get(champ.id);
+    const ranked = rankedEntries();
+    const rows = ranked.map((e) => ({ player: e.player, score: mode === 'rounds' ? e.wins : e.pts, label: mode === 'rounds' ? (e.wins === 1 ? 'win' : 'wins') : 'pts' }));
+    const ce = ranked[0];
+    // champion moment: alone in the middle of a fresh dohyo, confetti raining
     if (ce) {
       focusId = ce.id;
+      for (const e of entries.values()) { e.f.state = 'idle'; e.view.setPose(null); }
+      setupArena('dohyo');
       sim.placeForRound([ce.f]);
       ce.f.state = 'alive';
-      for (const e of entries.values()) if (e !== ce) e.f.state = 'idle';
+      ce.f.face = 0;
       ce.view.setPose('win');
       fx.confetti(0, 3, 0, 160, 5);
-      hud.callout(`🏆 ${escapeHtml(champ.name)}<small>Sumo Smash champion!</small>`, 2600);
+      sfx.play('win');
+      hud.setHeader('Sumo <b>Smash</b>', '');
+      hud.callout(`<span class="c" style="--c:${ce.player.color}">${escapeHtml(ce.player.name)}</span><small>is the Sumo Smash champion</small>`, 2700, 'low');
+      // snap the camera onto the champion
+      camPos.set(0, 0.9 + Math.sin(PITCH) * 9, Math.cos(PITCH) * 9);
+      camLook.set(0, 0.9, -0.3);
+      for (const e of entries.values()) buzz(e.id, e === ce ? 'win' : 'success');
     }
     sendAll();
-    await wait(2800);
+    await wait(3000);
     if (destroyed) return;
-    const choice = await ctx.showResults(rows, { title: 'Sumo Smash', subtitle: champ ? `${champ.name} is the last one standing!` : '' });
+    const choice = await ctx.showResults(rows, { title: 'Sumo Smash', subtitle: ce ? `${ce.player.name} is the last one standing` : '' });
     if (destroyed || choice !== 'again') return;
     runMatch();
   }
@@ -533,17 +627,24 @@ export default async function start(ctx) {
   const desired = new THREE.Vector3();
   const PITCH = 0.92; // radians above horizontal
 
+  const inp = { x: 0, y: 0, dash: false, slam: false };
+  let autopilot = false; // test hook: humans are driven by the bot brain
   function getInput(f) {
-    if (f.isBot) return sim.botInput(f);
+    if (phase !== 'play') { inp.x = 0; inp.y = 0; inp.dash = false; inp.slam = false; return inp; }
+    if (f.isBot || (autopilot && (autopilot === true || autopilot.has(f.id)))) return sim.botInput(f);
     const i = input.get(f.id);
-    return { x: i.x, y: i.y, dash: i.pressed('a'), slam: !!i.b.b };
+    inp.x = i.x; inp.y = i.y; inp.dash = i.pressed('a'); inp.slam = !!i.b.b;
+    return inp;
   }
 
   function checkRoundEnd(dt) {
     if (phase !== 'play') return;
-    const list = [...entries.values()];
-    const alive = list.filter((e) => e.f.state === 'alive');
-    const falling = list.some((e) => e.f.state === 'falling');
+    let aliveN = 0;
+    let last = null;
+    let falling = false;
+    for (const e of entries.values()) {
+      if (e.f.state === 'alive') { aliveN++; last = e; } else if (e.f.state === 'falling') falling = true;
+    }
     roundT += dt;
     if (mode === 'points') {
       hud.setTimer(roundLen - roundT);
@@ -552,19 +653,21 @@ export default async function start(ctx) {
     }
     if (!sim.suddenDeath && roundT > 40) {
       sim.suddenDeath = true;
-      hud.callout('SUDDEN DEATH!<small>The arena is shrinking</small>', 1600);
+      hud.callout(`Sudden death<small>${arenaType === 'crumble' ? 'The floor is collapsing faster' : 'The arena is shrinking'}</small>`, 1600);
       sfx.play('countdown');
     }
-    if (!finalDuelAnnounced && alive.length === 2 && list.length >= 3) {
+    if (!finalDuelAnnounced && aliveN === 2 && roundSize >= 3) {
       finalDuelAnnounced = true;
-      hud.callout('FINAL DUEL!', 1200);
+      hud.callout('Final duel', 1200);
+      sfx.play('countdown');
     }
-    if (alive.length <= 1 && !falling) {
+    if (aliveN <= 1 && !falling) {
       roundEndCheck += dt;
-      if (roundEndCheck > 0.5) { roundEndCheck = 0; endRound(alive[0] || null); }
+      if (roundEndCheck > 0.5) { roundEndCheck = 0; endRound(last); }
     } else roundEndCheck = 0;
-    if (roundT > roundLen && alive.length > 1) {
-      const w = alive.sort((a, b) => a.f.damage - b.f.damage)[0];
+    if (roundT > roundLen && aliveN > 1) {
+      let w = null;
+      for (const e of entries.values()) if (e.f.state === 'alive' && (!w || e.f.damage < w.f.damage)) w = e;
       endRound(w, 'Time up · lowest damage');
     }
   }
@@ -582,8 +685,11 @@ export default async function start(ctx) {
     let cz = 0;
     let ext = R;
     const focus = focusId && entries.get(focusId);
+    let lookY = 0.4;
     if (focus && (phase === 'roundEnd' || phase === 'results')) {
-      cx = focus.f.x; cz = focus.f.z; ext = 1.6;
+      cx = focus.f.x; cz = focus.f.z; ext = 3.1; lookY = focus.f.y + 0.9;
+    } else if (slowFocus && slowT < SLOW_LEN + 0.6 && phase === 'play') {
+      cx = slowFocus.x; cz = slowFocus.z; ext = 4.2; lookY = Math.max(-2.5, slowFocus.y * 0.5);
     } else if (phase === 'countdown' || phase === 'intro' || !pts.length) {
       ext = R + 1;
     } else {
@@ -598,10 +704,10 @@ export default async function start(ctx) {
     }
     const tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     const dist = THREE.MathUtils.clamp((ext * 1.05) / tanH, 7, 60);
-    const k = 1 - Math.exp(-dt * (phase === 'roundEnd' ? 2.5 : 2));
-    desired.set(cx, Math.sin(PITCH) * dist, cz + Math.cos(PITCH) * dist);
+    const k = 1 - Math.exp(-dt * (phase === 'roundEnd' || phase === 'results' ? 4 : slowT < SLOW_LEN ? 4 : 2));
+    desired.set(cx, lookY + Math.sin(PITCH) * dist, cz + Math.cos(PITCH) * dist);
     camPos.lerp(desired, k);
-    tmpLook.set(cx, 0.4, cz - 0.3);
+    tmpLook.set(cx, lookY, cz - 0.3);
     camLook.lerp(tmpLook, k);
     camera.position.copy(camPos);
     // shake
@@ -623,7 +729,7 @@ export default async function start(ctx) {
   function updateCards() {
     const now = performance.now();
     const rows = [...entries.values()].filter((e) => e.isBot || ctx.player(e.id)?.connected).sort((a, b) => (mode === 'points' ? b.pts - a.pts : 0) || a.player.index - b.player.index).map((e) => ({
-      id: e.id, name: e.player.name, color: e.player.color, avatar: e.player.avatar,
+      id: e.id, name: e.player.name, color: e.player.color,
       dmg: e.f.damage, wins: e.wins, target, pts: e.pts,
       out: e.f.state === 'out' || e.f.state === 'falling' || e.f.state === 'respawning' || (e.f.state === 'idle' && phase === 'play'),
       outText: e.f.state === 'respawning' ? `${Math.ceil(e.f.respawnT)}s` : e.f.state === 'idle' ? 'NEXT' : 'OUT',
@@ -637,6 +743,11 @@ export default async function start(ctx) {
     if (destroyed || !sim.arena) return;
     let simDt = dt;
     if (hitStop > 0) { hitStop -= dt; simDt = 0; }
+    // final ring-out slow motion: 0.25x, easing back to full speed
+    if (slowT < SLOW_LEN) {
+      slowT += dt;
+      simDt *= slowT < 0.9 ? 0.25 : Math.min(1, 0.25 + (slowT - 0.9) * 1.6);
+    }
     if (phase === 'play' || phase === 'roundEnd') {
       acc += simDt;
       let steps = 0;
@@ -655,17 +766,20 @@ export default async function start(ctx) {
     arenaView?.update(dt, t, sim, fx);
 
     // fighters
-    const viewDt = simDt === 0 ? 0 : dt;
+    const viewDt = simDt;
     let leaderWins = 0;
     if (mode === 'rounds') for (const e of entries.values()) leaderWins = Math.max(leaderWins, e.wins);
     for (const e of entries.values()) {
       const f = e.f;
       f.groundY = sim.groundY(f.x, f.z);
       e.view.update(f, viewDt, t, { crown: leaderWins > 0 && e.wins === leaderWins && mode === 'rounds' });
-      if (f.state === 'alive' && f.stun > 0 && f.speed > 9 && Math.random() < 0.8) fx.speedLine(f.x, f.y, f.z);
-      if (f.state === 'alive' && f.power === 'feather' && f.speed > 3 && Math.random() < 0.4) fx.spawn({ x: f.x, y: f.y + 0.5, z: f.z, vy: 0.5, life: 0.5, size: 0.4, size1: 0, color: 0x8ff0ff, shape: 1 });
-      if (f.state === 'alive' && f.dashT > 0) fx.speedLine(f.x, f.y, f.z, e.player.colorHex);
-      if (f.state === 'alive' && arenaType === 'ice' && f.speed > 4 && !f.airborne && Math.random() < 0.3) fx.spawn({ x: f.x, y: 0.1, z: f.z, vx: (Math.random() - 0.5), vy: 0.6, vz: (Math.random() - 0.5), life: 0.4, size: 0.3, size1: 0.6, alpha: 0.6, color: 0xffffff, shape: 0 });
+      if (f.state !== 'alive' || viewDt === 0) continue;
+      if (f.stun > 0 && f.speed > 9 && Math.random() < 0.8) fx.speedLine(f.x, f.y, f.z);
+      if (f.power === 'feather' && f.speed > 3 && Math.random() < 0.4) fx.puff(f.x, f.y + 0.5, f.z, 0, 0.5, 0, 0.5, 0.4, 0, 1, 0x8ff0ff, 1);
+      if (f.dashT > 0) fx.speedLine(f.x, f.y, f.z, e.player.colorHex);
+      if (arenaType === 'ice' && f.speed > 4 && !f.airborne && Math.random() < 0.3) fx.puff(f.x, 0.1, f.z, Math.random() - 0.5, 0.6, Math.random() - 0.5, 0.4, 0.3, 0.6, 0.6, 0xffffff, 0);
+      // skid dust when a launched fighter slides along the ground
+      if (f.stun > 0 && !f.airborne && f.speed > 6 && arenaType !== 'ice' && Math.random() < 0.5) fx.puff(f.x, f.groundY + 0.1, f.z, -f.vx * 0.08, 0.7, -f.vz * 0.08, 0.5, 0.6, 1.4, 0.65, arenaDust(), 0);
     }
     // power-ups bob
     for (const v of puViews.values()) {
@@ -685,13 +799,13 @@ export default async function start(ctx) {
     }
     // ambient snow on the ice arena
     if (arenaType === 'ice' && Math.random() < 0.6) {
-      fx.spawn({ x: camLook.x + (Math.random() - 0.5) * 30, y: 10, z: camLook.z + (Math.random() - 0.5) * 24, vx: 0.3, vy: -1.6, vz: 0.2, life: 6, size: 0.18, color: 0xffffff, shape: 2, alpha: 0.9 });
+      fx.puff(camLook.x + (Math.random() - 0.5) * 30, 10, camLook.z + (Math.random() - 0.5) * 24, 0.3, -1.6, 0.2, 6, 0.18, 0.18, 0.9, 0xffffff, 2);
     }
     // lava embers
     if (arenaType === 'crumble' && Math.random() < 0.5) {
-      fx.spawn({ x: (Math.random() - 0.5) * 50, y: SEA_Y + 1, z: (Math.random() - 0.5) * 50, vy: 2 + Math.random() * 2, life: 4, size: 0.25, size1: 0.05, color: 0xffa040, shape: 2 });
+      fx.puff((Math.random() - 0.5) * 50, SEA_Y + 1, (Math.random() - 0.5) * 50, 0, 2 + Math.random() * 2, 0, 4, 0.25, 0.05, 1, 0xffa040, 2);
     }
-    fx.update(dt);
+    fx.update(slowT < SLOW_LEN ? Math.max(simDt, dt * 0.25) : dt);
     updateCamera(dt, t);
     cardsT -= dt;
     if (cardsT <= 0 && (cardsDirty || phase === 'play')) {
@@ -714,11 +828,16 @@ export default async function start(ctx) {
   // warm-up render so shaders compile under the spinner
   renderer.compile(scene, camera);
 
-  // read-only test hook (used by scripts/sumo-test.mjs)
+  // test hook (used by scripts/sumo-test.mjs)
   window.__sumoDebug = {
     get phase() { return phase; }, get mode() { return mode; }, get round() { return roundNo; }, get arena() { return arenaType; },
-    fighters: () => [...entries.values()].map((e) => ({ id: e.id, name: e.player.name, x: e.f.x, z: e.f.z, y: e.f.y, state: e.f.state, dmg: e.f.damage, wins: e.wins, pts: e.pts })),
-    setTarget(n) { target = n; },
+    get target() { return target; }, get maxRounds() { return maxRounds; }, get slowmo() { return slowT < SLOW_LEN; },
+    get R() { return sim.arena?.R; }, get Reff() { return sim.arena?.Reff; },
+    fighters: () => [...entries.values()].map((e) => ({ id: e.id, name: e.player.name, bot: e.isBot, x: e.f.x, z: e.f.z, y: e.f.y, state: e.f.state, dmg: e.f.damage, wins: e.wins, pts: e.pts, inMatch: e.inMatch, solid: sim.arena ? sim.solidAt(e.f.x, e.f.z) : null })),
+    setTarget(n) { target = n; cardsDirty = true; },
+    setMaxRounds(n) { maxRounds = n; },
+    /** true = every human is bot-driven; array of player names = just those; false = off */
+    autopilot(v) { autopilot = Array.isArray(v) ? new Set([...entries.values()].filter((e) => v.includes(e.player.name)).map((e) => e.id)) : v; },
   };
 
   runMatch();

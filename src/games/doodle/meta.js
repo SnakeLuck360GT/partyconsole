@@ -5,6 +5,7 @@ export default {
   emoji: '✏️',
   color: '#ff9f1c',
   thumbnail: 'thumb.jpg',
+  orientation: 'portrait',
   minPlayers: 2,
   maxPlayers: 999, // Draw & Guess shines at 3–12; Telephone mode handles 30+ at once
   order: 20,

@@ -6,7 +6,7 @@ export const SEA_Y = -13;
 export const THEMES = {
   dohyo: { top: 0x3b6fd6, horizon: 0xffb877, bottom: 0x1d4f7a, sun: 0xffd9a0, surface: 0, deep: 0x0d4a6e, shallow: 0x2fa3b8, fogNear: 70, fogFar: 260, sunDir: [0.5, 0.28, -0.8], sunI: 2.4, hemi: [0xfff0dd, 0x5a6a88], island: 'grass' },
   ice: { top: 0x4c8ee8, horizon: 0xdcefff, bottom: 0x2d5f8c, sun: 0xffffff, surface: 0, deep: 0x0a2f55, shallow: 0x3f8fc4, fogNear: 60, fogFar: 230, sunDir: [-0.4, 0.55, -0.7], sunI: 2.6, hemi: [0xeaf4ff, 0x6a86a8], island: 'snow' },
-  crumble: { top: 0x1b1033, horizon: 0xff6b3a, bottom: 0x2a0a05, sun: 0xffa066, surface: 1, deep: 0x5a0a00, shallow: 0xff7a10, fogNear: 60, fogFar: 220, sunDir: [0.2, 0.3, -0.9], sunI: 1.9, hemi: [0xffc49a, 0x6a2a20], island: 'basalt' },
+  crumble: { top: 0x1b1033, horizon: 0xc0583a, bottom: 0x2a0a05, sun: 0xffb27a, surface: 1, deep: 0x5a0a00, shallow: 0xff6a10, fogNear: 50, fogFar: 200, sunDir: [0.2, 0.3, -0.9], sunI: 1.9, hemi: [0xffc49a, 0x6a2a20], island: 'basalt' },
   spinner: { top: 0x2a86ff, horizon: 0xc5ecff, bottom: 0x1a6c8a, sun: 0xfff6e0, surface: 0, deep: 0x05607a, shallow: 0x22d3c5, fogNear: 80, fogFar: 280, sunDir: [0.45, 0.7, -0.5], sunI: 2.8, hemi: [0xffffff, 0x5a7a90], island: 'tropic' },
   mushroom: { top: 0x7a6cff, horizon: 0xffcfe8, bottom: 0xf3d8ff, sun: 0xfff0f6, surface: 2, deep: 0xe9c6ff, shallow: 0xffffff, fogNear: 70, fogFar: 240, sunDir: [-0.5, 0.45, -0.75], sunI: 2.4, hemi: [0xfff0ff, 0x9a7ab8], island: 'fairy' },
 };
@@ -69,10 +69,11 @@ void main() {
     vec2 uv = vWorld.xz * 0.06;
     float n = fbm(uv + vec2(uTime * 0.03, uTime * 0.02));
     float n2 = fbm(uv * 2.5 - vec2(uTime * 0.05, -uTime * 0.04) + n);
-    float heat = smoothstep(0.35, 0.75, n2);
-    col = mix(vec3(0.12, 0.02, 0.0), uDeep, smoothstep(0.2, 0.5, n2));
-    col = mix(col, uShallow * 1.6, heat);
-    col += vec3(1.0, 0.8, 0.3) * pow(heat, 4.0) * 1.2;
+    // mostly dark cooled crust, molten channels glowing between the plates
+    float crust = smoothstep(0.44, 0.6, n2);
+    col = mix(uShallow * 0.9, vec3(0.09, 0.035, 0.03), crust);
+    float vein = 1.0 - smoothstep(0.0, 0.035, abs(n2 - 0.47));
+    col += vec3(1.0, 0.6, 0.2) * vein * 0.55;
   } else if (uMode == 2.0) {
     // cloud sea: soft billows
     vec2 uv = vWorld.xz * 0.035;

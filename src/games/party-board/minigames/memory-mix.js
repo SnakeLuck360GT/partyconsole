@@ -24,7 +24,7 @@ export default {
   name: 'Memory Mix',
   instructions: 'Watch DJ Bot\'s dance moves, then repeat them in order on your <b>d-pad</b>. Sequences get longer every round!',
   mode: 'ffa',
-  minPlayers: 2,
+  minPlayers: 1,
   controls: { stick: 'dpad', buttons: [], hint: 'Repeat the moves on the d-pad' },
   duration: 75,
 
@@ -102,7 +102,7 @@ export default {
 
       // HUD: sequence strip
       const strip = document.createElement('div');
-      strip.style.cssText = 'position:absolute;top:11vh;left:50%;transform:translateX(-50%);z-index:21;display:flex;gap:1.2vmin;pointer-events:none;font-family:var(--font)';
+      strip.style.cssText = 'position:absolute;top:11vh;left:50%;transform:translateX(-50%);z-index:21;display:flex;gap:1.2vmin;pointer-events:none;font-family:Figtree,system-ui,sans-serif';
       s.root.appendChild(strip);
       function showStrip(seq, shown, hidden = false) {
         strip.innerHTML = seq.map((d, i) => {
@@ -146,7 +146,7 @@ export default {
         const len = 2 + round;
         const seq = Array.from({ length: len }, () => KEYS[Math.floor(Math.random() * 4)]);
         s.hud.big(`Round ${round}`, 900);
-        list.forEach((c) => s.status(c.id, '👀 Watch DJ Bot…'));
+        list.forEach((c) => s.status(c.id, 'Watch DJ Bot…'));
         await s.wait(1000);
         // demo
         const step = Math.max(0.45, 0.8 - round * 0.05);
@@ -167,13 +167,13 @@ export default {
         s.hud.note('Your turn! Repeat the moves', 1500);
         sfx.play('go');
         const state = new Map(list.map((c) => [c.id, { i: 0, done: false, ok: false }]));
-        list.forEach((c) => { s.status(c.id, `🎵 Your turn! ${len} moves`); prev.set(c.id, dirOf(s.input(c.id).x, s.input(c.id).y)); s.hud.setScore(c.id, c.score, { extra: '', bump: false }); });
+        list.forEach((c) => { s.status(c.id, `Your turn! Repeat ${len} moves`); prev.set(c.id, dirOf(s.input(c.id).x, s.input(c.id).y)); s.hud.setScore(c.id, c.score, { extra: '', bump: false }); });
         const win = 2.5 + len * 0.9;
         let el = 0;
         await new Promise((res) => {
           const off = s.onFrame((dt) => {
             el += dt;
-            s.hud.note(`Your turn! ⏱ ${Math.ceil(win - el)}`);
+            s.hud.note(`Your turn! ${Math.ceil(win - el)}`);
             for (const c of list) {
               const st = state.get(c.id);
               const inp = s.input(c.id);
@@ -189,22 +189,22 @@ export default {
                 if (st.i >= len) {
                   st.done = true; st.ok = true;
                   c.score += len;
-                  s.hud.setScore(c.id, c.score, { extra: '✔' });
+                  s.hud.setScore(c.id, c.score, { extra: '✓' });
                   s.pop(c.pos.clone().setY(c.height + 0.6), `+${len}`, '#7dff9a', { size: 1.2 });
                   s.fx.burst(c.pos.clone().setY(1.2), { color: [0x7dff9a, 0xffffff], count: 12, speed: 3, up: 4, glow: true, size: 0.1 });
                   sfx.play('correct');
                   s.vibrate(c.id, 60);
-                  s.status(c.id, `✅ Perfect! +${len}`);
+                  s.status(c.id, `Perfect! +${len}`);
                 }
               } else {
                 st.done = true;
                 c.action('no', 1.0);
                 c.flash(0xff2020, 0.4);
-                s.hud.setScore(c.id, c.score, { extra: '✖' });
+                s.hud.setScore(c.id, c.score, { extra: '✗' });
                 s.pop(c.pos.clone().setY(c.height + 0.6), 'MISS', '#ff6a6a');
                 sfx.play('wrong');
                 s.vibrate(c.id, 200);
-                s.status(c.id, '❌ Wrong move! Wait for the next round.');
+                s.status(c.id, 'Wrong move! Wait for the next round.');
               }
             }
             if (el >= win || list.every((c) => state.get(c.id).done) || s.aborted) { off(); res(); }
@@ -214,7 +214,7 @@ export default {
         showStrip(seq, len);
         for (const c of list) {
           const st = state.get(c.id);
-          if (!st.done) { c.action('no', 1.0); s.hud.setScore(c.id, c.score, { extra: '⌛' }); s.status(c.id, '⌛ Too slow!'); }
+          if (!st.done) { c.action('no', 1.0); s.hud.setScore(c.id, c.score, { extra: 'slow' }); s.status(c.id, 'Too slow!'); }
           else if (st.ok) c.action('yes', 1.0);
         }
         const perfect = list.filter((c) => state.get(c.id).ok).length;

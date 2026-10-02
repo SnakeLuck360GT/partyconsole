@@ -107,9 +107,9 @@ export function shuffled(arr) {
 
 /** Fit a box of aspect (w/h) inside a parent's content box. */
 export function fitBox(box, parent, aspect, pad = 0) {
-  const r = parent.getBoundingClientRect();
-  const aw = Math.max(10, r.width - pad * 2);
-  const ah = Math.max(10, r.height - pad * 2);
+  // clientWidth/Height = layout size, unaffected by CSS transforms (entry animations scale the parent)
+  const aw = Math.max(10, parent.clientWidth - pad * 2);
+  const ah = Math.max(10, parent.clientHeight - pad * 2);
   let w = aw;
   let h = w / aspect;
   if (h > ah) { h = ah; w = h * aspect; }
